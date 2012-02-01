@@ -1,6 +1,6 @@
 /**
  * @file
- *   @brief Definition of class VLCVideoWidget
+ *   @brief This class implements a video display widget
  *
  *   @author Alejandro Molina Pulido <am.alex09@gmail.com>
  *
@@ -329,7 +329,7 @@ void VLCVideoWidget::captureSnapshot()
             QImage myImage;
             myImage.load(pathVideo+str);//load snapshot
             QFile::remove(pathVideo+str);//remove snapshot
-            listImages.append(myImage);//saved QImage to QList images
+            //listImages.append(myImage);//saved QImage to QList images
             ui->lbImageSnapShot->setPixmap(QPixmap::fromImage(myImage));//assigned the image generated
             processImage(myImage);//process the image
 
@@ -343,21 +343,23 @@ void VLCVideoWidget::processImage(QImage image)
     QRect sizeImage = image.rect();
     qDebug()<<"Size Image: "<<sizeImage.height()<<" x "<<sizeImage.width();
 
-    QImage img(sizeImage.width(), sizeImage.height(), QImage::Format_RGB16);
+    QImage img(sizeImage.width(), sizeImage.height(), QImage::Format_Indexed8);
 
-    for(int ii =0; ii< sizeImage.width(); ii++)//704
-    {
-        for(int tt =0; tt< sizeImage.height(); tt++)//480
-        {
-            QRgb color = image.pixel(ii, tt);
-            matriz[ii][tt].rColor = qRed(color);
-            matriz[ii][tt].gColor = qGreen(color);
-            matriz[ii][tt].bColor = qBlue(color);
+    qDebug()<< "Depth: " << img.depth();
 
-            QColor colorRGB(matriz[ii][tt].rColor, matriz[ii][tt].gColor, matriz[ii][tt].bColor);
-            img.setPixel(ii, tt, colorRGB.rgb());
-        }
-    }
+//    for(int ii =0; ii< sizeImage.width(); ii++)//704
+//    {
+//        for(int tt =0; tt< sizeImage.height(); tt++)//480
+//        {
+//            QRgb color = image.pixel(ii, tt);
+//            matriz[ii][tt].rColor = qRed(color);
+//            matriz[ii][tt].gColor = qGreen(color);
+//            matriz[ii][tt].bColor = qBlue(color);
+
+//            QColor colorRGB(matriz[ii][tt].rColor, matriz[ii][tt].gColor, matriz[ii][tt].bColor);
+//            img.setPixel(ii, tt, colorRGB.rgb());
+//        }
+//    }
 
     ui->lbImageMatrixRGB->setPixmap(QPixmap::fromImage(img));
 }

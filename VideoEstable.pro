@@ -14,10 +14,12 @@ TEMPLATE = app
 ICON = icons/macx.icns
 
 SOURCES += main.cpp\
-    DataMatrix.cpp
+    DataMatrix.cpp \
+    videoStabilizer.cc
 
 HEADERS  += \
-    DataMatrix.h
+    DataMatrix.h \
+    videoStabilizer.h
 
 RESOURCES += \
     resources.qrc
