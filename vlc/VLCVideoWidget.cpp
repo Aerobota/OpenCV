@@ -28,8 +28,9 @@ VLCVideoWidget::VLCVideoWidget(const QString path, QWidget *parent) :
         //"--no-audio",
         //"--plugin-path", VLC_TREE "/modules",
         "--ignore-config", //Don't use VLC's config files
-        "--rtsp-caching=400",
-        "--http-caching=200"
+        "--rtsp-caching=100",
+        "--http-caching=200",
+        "--no-snapshot-preview"
         //"--{rtsp,http,sout-mux}-caching"
     };
     int argc = sizeof( argv ) / sizeof( *argv );
@@ -279,8 +280,9 @@ void VLCVideoWidget::addURL(const QString url)
         //"--no-audio",
         //"--plugin-path", VLC_TREE "/modules",
         "--ignore-config", //Don't use VLC's config files
-        "--rtsp-caching=400",
-        "--http-caching=200"
+        "--rtsp-caching=100",
+        "--http-caching=200",
+        "--no-snapshot-preview"
         // "--{rtsp,http,sout-mux}-caching"
         //"--http-reconnect=0"
         //"--http-continuous=0"
