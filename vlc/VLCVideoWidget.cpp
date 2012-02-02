@@ -114,6 +114,8 @@ VLCVideoWidget::VLCVideoWidget(const QString path, QWidget *parent) :
 
     setWindowTitle("Estabilizacion de Video");
     qDebug() << "CHECK END VLCVIDEOWIDGET "<<QTime::currentTime().toString("HHmmss");
+
+
 }
 
 void VLCVideoWidget::play()
@@ -252,7 +254,7 @@ void VLCVideoWidget::openRTSP()
 
 void VLCVideoWidget::openFile()
 {
-    QString fileName(QFileDialog::getOpenFileName(this, tr("Open File Movie"), "/", tr("Movie Files (*.avi | *.mp4)")));
+    QString fileName(QFileDialog::getOpenFileName(this, tr("Open File Movie"), "/Users/malifeMb/Documents/Mariano/SEMAR/Inidetam/ImagenGrafica", tr("Movie Files (*.avi | *.mp4)")));
 
     if (fileName.isEmpty())
         return;
@@ -328,6 +330,7 @@ void VLCVideoWidget::captureSnapshot()
         {
             QImage myImage;
             myImage.load(pathVideo+str);//load snapshot
+            myImage = myImage.convertToFormat(QImage::Format_Indexed8);
             QFile::remove(pathVideo+str);//remove snapshot
             //listImages.append(myImage);//saved QImage to QList images
             ui->lbImageSnapShot->setPixmap(QPixmap::fromImage(myImage));//assigned the image generated
@@ -340,6 +343,10 @@ void VLCVideoWidget::captureSnapshot()
 
 void VLCVideoWidget::processImage(QImage image)
 {
+    if (video == NULL ){
+        video = new videoStabilizer(image.rect());
+    }
+
     QRect sizeImage = image.rect();
     qDebug()<<"Size Image: "<<sizeImage.height()<<" x "<<sizeImage.width();
 
@@ -347,11 +354,13 @@ void VLCVideoWidget::processImage(QImage image)
 
     qDebug()<< "Depth: " << img.depth();
 
+    video->stabilizeImage(&image,&img);
+
 //    for(int ii =0; ii< sizeImage.width(); ii++)//704
 //    {
 //        for(int tt =0; tt< sizeImage.height(); tt++)//480
 //        {
-//            QRgb color = image.pixel(ii, tt);
+//           QRgb color = image.pixel(ii, tt);
 //            matriz[ii][tt].rColor = qRed(color);
 //            matriz[ii][tt].gColor = qGreen(color);
 //            matriz[ii][tt].bColor = qBlue(color);

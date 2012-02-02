@@ -25,6 +25,8 @@
 #include <QImage>
 #include <QColor>
 
+#include"videoStabilizer.h"
+
 namespace Ui {
     class VLCVideoWidget;
 }
@@ -63,7 +65,9 @@ private:
     QString styleButtonGreen;
     QString pathVideo;
     void contextMenuEvent(QContextMenuEvent *);
-    QAction* acVolume, *acMediaPosition;    
+    QAction* acVolume, *acMediaPosition;
+
+    videoStabilizer* video;
 
 protected:
     void closeEvent(QCloseEvent *event);
