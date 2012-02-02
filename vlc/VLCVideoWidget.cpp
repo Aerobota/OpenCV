@@ -343,17 +343,26 @@ void VLCVideoWidget::captureSnapshot()
 
 void VLCVideoWidget::processImage(QImage image)
 {
+    QRect sizeImage = image.rect();
+    static QImage img(sizeImage.width(), sizeImage.height(), QImage::Format_Indexed8);
+
     if (video == NULL ){
         video = new videoStabilizer(image.rect());
+
+        img.setColorTable(image.colorTable());
     }
 
-    QRect sizeImage = image.rect();
+
     qDebug()<<"Size Image: "<<sizeImage.height()<<" x "<<sizeImage.width();
 
-    QImage img(sizeImage.width(), sizeImage.height(), QImage::Format_Indexed8);
+
 
     qDebug()<< "Depth: " << img.depth();
+    qDebug()<< "Image CT: " << image.colorCount();
+    qDebug()<< "Img CT: " << img.colorCount();
 
+
+    //img = image;
     video->stabilizeImage(&image,&img);
 
 //    for(int ii =0; ii< sizeImage.width(); ii++)//704

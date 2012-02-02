@@ -47,9 +47,6 @@ void videoStabilizer::stabilizeImage(QImage* imageSrc, QImage* imageDest){
 void videoStabilizer::convertImageToMatrix(QImage* imageSrc){
     for (int ii=0; ii < videoHeight; ii++){
         imageMatrix[ii] = imageSrc->scanLine(ii);
-        for (int jj = 0; jj < videoWidth; jj++)
-            printf("%03d ",imageMatrix[ii][jj]);
-        std::cout << endl;
     }
 }
 
@@ -60,7 +57,7 @@ inline bool videoStabilizer::getByteGrayCode (uchar value){
 void videoStabilizer::populateImageResult(QImage* imageDest){
     for (int ii = 0; ii<this->videoHeight; ii++ ){
         for (int jj = 0; jj < this->videoWidth; jj++){
-            imageDest->setPixel(ii,jj,(uchar)((*grayCodeMatrix[ii]).testBit(jj)));
+            imageDest->setPixel(jj,ii,(uchar)((*grayCodeMatrix[ii]).testBit(jj))*255);
         }
     }
 }
