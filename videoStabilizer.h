@@ -33,6 +33,9 @@ public:
 
     ~videoStabilizer( );
 
+    typedef QVector<QBitArray*>  tGrayCodeMat;
+    typedef QVector<uchar*> tImageMat;
+
 signals:
     
 public slots:
@@ -70,25 +73,40 @@ private:
     */
     void populateImageResult(QImage* imageDest);
 
+    /**
+        This function computes the Subframe correlation measures. It works over
+    Gray coded images.
+    @param  g_k     The Gray code of the current frame
+    @param  g_k_m1  The Gray code of the frame at t-1
+    @return C_j     The correlation matrix
+
+    @note   The correlation relies on some values #defined in the class' header
+    */
+    void computeSubframeCorrelation (QVector<QBitArray*> g_k,
+                                     QVector<QBitArray*> g_k_m1,
+                                     QVector<QByteArray*> c_j);
+
 
     /** Holds the height of the video */
     int videoHeight;
     /** Holds the width of the video */
     int videoWidth;
+    /** Holds the current index of the grayCodeMatrix being used*/
+    uchar currentGrayCodeIndex;
 
 
     /**
-    This variable holds videoHeight array of QBitArrays that are
-    videoWidth long.
+    This variable is an array of vectors that are in turn videoHeight arrays of QBitArrays that are
+    videoWidth long. They take turns to hold g_k[t] and g_k[t-1]
 
     @see getGrayCode()
     */
-    QVector<QBitArray*> grayCodeMatrix;
+    tGrayCodeMat grayCodeMatrix[2];
 
     /**
     This variable holds the image matrix currently being worked on.
     */
-    QVector<uchar*> imageMatrix;
+    tImageMat imageMatrix;
 
 };
 
