@@ -11,7 +11,7 @@
 #include <QObject>
 #include <QImage>
 #include <QBitArray>
-
+#include <limits>
 /**
 @def    This defines determine the  the two bitplanes to be used in the
         Gray code calculation.
@@ -19,6 +19,9 @@
 #define GC_FIRST_BITPLANE       32
 #define GC_SECOND_BITPLANE      64
 
+#define SEARCH_FACTOR_P         8
+#define HORIZ_WINDOW_M          32
+#define VERT_WINDOW_N           32
 
 class videoStabilizer : public QObject
 {
@@ -33,8 +36,23 @@ public:
 
     ~videoStabilizer( );
 
-    typedef QVector<QBitArray*>  tGrayCodeMat;
+    typedef QVector<QBitArray>  tGrayCodeMat;
+
     typedef QVector<uchar*> tImageMat;
+    typedef QVector<uint*> tCorrelationMat;
+
+    typedef struct _tLocalMinima{
+        int     m;
+        int     n;
+        uint      value;
+    }tLocalMinima;
+
+    typedef struct _tSearchWindow{
+        uint    lx;
+        uint    ly;
+        uint    rx;
+        uint    ry;
+    } tSearchWindow;
 
 signals:
     
@@ -73,18 +91,25 @@ private:
     */
     void populateImageResult(QImage* imageDest);
 
+
+    /**
+        This function computes the overall correlation of the subframes
+    */
+    void computeCorrelation();
     /**
         This function computes the Subframe correlation measures. It works over
     Gray coded images.
-    @param  g_k     The Gray code of the current frame
-    @param  g_k_m1  The Gray code of the frame at t-1
-    @return C_j     The correlation matrix
 
+    @param  subframe    The subframe beinc computed
     @note   The correlation relies on some values #defined in the class' header
     */
-    void computeSubframeCorrelation (QVector<QBitArray*> g_k,
-                                     QVector<QBitArray*> g_k_m1,
-                                     QVector<QByteArray*> c_j);
+    void computeSubframeCorrelation (uchar subframe, uchar t_m1);
+
+    /**
+        Compute single correlation for m,n offset;
+    */
+    void computeSingleCorrelation (uchar subframe, uchar t_m1, uint m, uint n);
+
 
 
     /** Holds the height of the video */
@@ -93,6 +118,15 @@ private:
     int videoWidth;
     /** Holds the current index of the grayCodeMatrix being used*/
     uchar currentGrayCodeIndex;
+    /** Holds the size of the search window based on the search factor*/
+    const uchar searchFactorWindow;
+    /** Holds the vertical search offset for subframes LR and LL*/
+    const uint vSearchOffset;
+    /** Holds the horizontal search offset for subframes UR and LR*/
+    const uint hSearchOffset;
+
+    tSearchWindow subframeLocations[4];
+
 
 
     /**
@@ -107,6 +141,20 @@ private:
     This variable holds the image matrix currently being worked on.
     */
     tImageMat imageMatrix;
+
+    /**
+    This variable holds the correlation matrix computed of each subframe
+    0 -> UL
+    1 -> UR
+    2 -> LL
+    3 -> LR
+    */
+    tCorrelationMat correlationMatrix[4];
+
+    /** This array holds the local minima of each subframe */
+    tLocalMinima localMinima[4];
+
+
 
 };
 
