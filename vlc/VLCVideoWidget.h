@@ -46,8 +46,8 @@ private:
     libvlc_media_player_t * mediaPlayer;
     libvlc_media_t * media;
 
-    QList<QImage> listImages;
-    QStringList files;
+    QSlider* slVolume;
+    QSlider* slMediaPosition;
     DataMatrix::MColor matriz[704][480];
     QPushButton *btPlay;
     QPushButton *btStop;    
@@ -71,6 +71,20 @@ private:
 
 protected:
     void closeEvent(QCloseEvent *event);
+    /**
+     * @brief This method create the main instantiates VLC.
+     *
+     * @param path The path for instance to play
+     **/
+    void createInstanceVLC(const QString url);
+    /**
+     * @brief This method create the widget for visualize video player.
+     **/
+    void createDisplayVLC();
+    /**
+     * @brief This method initializa the controls for VLC video player.
+     **/
+    void createControlsVLC();
 
 private slots:
     void changePosition(int pos);
