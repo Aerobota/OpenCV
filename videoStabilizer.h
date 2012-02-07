@@ -16,8 +16,8 @@
 @def    This defines determine the  the two bitplanes to be used in the
         Gray code calculation.
 */
-#define GC_FIRST_BITPLANE       32
-#define GC_SECOND_BITPLANE      64
+
+
 
 #define SEARCH_FACTOR_P         8
 #define HORIZ_WINDOW_M          32
@@ -39,13 +39,12 @@ public:
     typedef QVector<QBitArray>  tGrayCodeMat;
 
     typedef QVector<uchar*> tImageMat;
-    typedef QVector<uint*> tCorrelationMat;
 
-    typedef struct _tLocalMinima{
+    typedef struct _tcorrMatElement{
         int     m;
         int     n;
         uint      value;
-    }tLocalMinima;
+    }tcorrMatElement;
 
     typedef struct _tSearchWindow{
         uint    lx;
@@ -53,6 +52,23 @@ public:
         uint    rx;
         uint    ry;
     } tSearchWindow;
+
+
+    /**
+        This enumeration is used to determine which bit plane to employ in the GC calculations
+
+        @enum BIT_PLANES
+    */
+    typedef enum _BIT_PLANES {
+        GC_BP_0 = 1,
+        GC_BP_1 = 2,
+        GC_BP_2 = 4,
+        GC_BP_3 = 8,
+        GC_BP_4 = 16,
+        GC_BP_5 = 32,
+        GC_BP_6 = 64,
+        GC_BP_7 = 128
+    }BIT_PLANES;
 
 signals:
     
@@ -69,6 +85,14 @@ private:
     void getGrayCode();
 
     /**
+        This function computes the gray code of each subframe's search window
+
+    @param  subframe    The subframe for which to compute the gray code
+    */
+    void getSubframeGrayCode (uchar subframe, BIT_PLANES bitPlane = GC_BP_5);
+
+
+    /**
       This function takes a QImage and scans line by line into uchar* to imageMatrix;
 
     @param  imageSrc        The image to be converted.
@@ -81,8 +105,9 @@ private:
 
     @param  value       The 8bit value to be used in the Gray code calculation. The
                         bitplanes used are #defined in the header file.
+    @param  bitPlane    The bitplane used to compute the graycode @see @enum BIT_PLANES
     */
-    inline bool getByteGrayCode(uchar value);
+    inline bool getByteGrayCode(uchar value, BIT_PLANES bitPlane = GC_BP_5);
 
     /**
         This function creates the de-rotated image to paint.
@@ -125,9 +150,8 @@ private:
     /** Holds the horizontal search offset for subframes UR and LR*/
     const uint hSearchOffset;
 
+    /** Holds the location of the ul and lr corners of each subframe*/
     tSearchWindow subframeLocations[4];
-
-
 
     /**
     This variable is an array of vectors that are in turn videoHeight arrays of QBitArrays that are
@@ -143,16 +167,13 @@ private:
     tImageMat imageMatrix;
 
     /**
-    This variable holds the correlation matrix computed of each subframe
-    0 -> UL
-    1 -> UR
-    2 -> LL
-    3 -> LR
+    This variable holds the 27 relevant values of the correlation matrix
+    as defined in the 3SS method
     */
-    tCorrelationMat correlationMatrix[4];
+    tcorrMatElement correlationMatrix[4][27];
 
     /** This array holds the local minima of each subframe */
-    tLocalMinima localMinima[4];
+    tcorrMatElement localMinima[4];
 
 
 

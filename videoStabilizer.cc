@@ -14,14 +14,12 @@ videoStabilizer::videoStabilizer(QRect videoSize,
     videoHeight = videoSize.height();
     videoWidth  = videoSize.width();
 
-    /// allocate the memory of all the Matrices
-    for (int jj = 0; jj < 4; jj++) {
-        correlationMatrix[jj].resize(searchFactorWindow);
-        for (int ii = 0; ii < searchFactorWindow; ii++) {
-            correlationMatrix[jj][ii] = new uint[searchFactorWindow];
-        }
+    // Initialize each subframe correlation vectors
+    for (uint subframe = 0; subframe < 4; subframe++) {
+        memset(correlationMatrix[subframe],0, sizeof(tcorrMatElement)*27);
     }
 
+    /// allocate the memory of all the Matrices
     grayCodeMatrix[0].resize(videoHeight);
     grayCodeMatrix[1].resize(videoHeight);
     imageMatrix.resize(videoHeight);
@@ -72,7 +70,7 @@ videoStabilizer::~videoStabilizer(){
 void videoStabilizer::stabilizeImage(QImage* imageSrc, QImage* imageDest){
     convertImageToMatrix(imageSrc);
     getGrayCode();
-    computeCorrelation();
+    //computeCorrelation();
 
 
     populateImageResult(imageDest);
@@ -84,19 +82,54 @@ void videoStabilizer::convertImageToMatrix(QImage* imageSrc){
     for (int ii=0; ii < videoHeight; ii++){
         imageMatrix[ii] = imageSrc->scanLine(ii);
     }
+
 }
 
 void videoStabilizer::getGrayCode(){
-    for (int ii = 0; ii<this->videoHeight; ii++ ){
-        for (int jj = 0; jj < this->videoWidth; jj++){
-            grayCodeMatrix[currentGrayCodeIndex][ii].setBit(jj, getByteGrayCode(imageMatrix[ii][jj]));
+
+    for (int subframe = 0; subframe < 4; subframe++){
+        getSubframeGrayCode(subframe);
+    }
+}
+
+
+void videoStabilizer::getSubframeGrayCode (uchar subframe, BIT_PLANES bitPlane){
+//    qDebug() << subframeLocations[subframe].lx - SEARCH_FACTOR_P;
+//    qDebug() << subframeLocations[subframe].rx + SEARCH_FACTOR_P;
+//    qDebug() << subframeLocations[subframe].ly - SEARCH_FACTOR_P;
+//    qDebug() << subframeLocations[subframe].ry + SEARCH_FACTOR_P;
+//    qDebug() << grayCodeMatrix[currentGrayCodeIndex].size();
+//    qDebug() << grayCodeMatrix[currentGrayCodeIndex][10].size();
+//    qDebug() << "=================" ;
+
+    for (uint ii = subframeLocations[subframe].lx - SEARCH_FACTOR_P;
+             ii < subframeLocations[subframe].rx + SEARCH_FACTOR_P;
+             ii++){
+        for (uint jj = subframeLocations[subframe].ly - SEARCH_FACTOR_P;
+                 jj < subframeLocations[subframe].ry + SEARCH_FACTOR_P;
+                 jj++){
+           grayCodeMatrix[currentGrayCodeIndex][jj].setBit(ii, getByteGrayCode(imageMatrix[jj][ii], bitPlane));
         }
     }
 }
 
 
-inline bool videoStabilizer::getByteGrayCode (uchar value){
-    return (bool) ((value & GC_FIRST_BITPLANE) ^ (value & GC_SECOND_BITPLANE));
+inline bool videoStabilizer::getByteGrayCode (uchar value, BIT_PLANES bitPlane){
+
+    switch (bitPlane){
+    case GC_BP_3:
+            return (bool) ((value & GC_BP_3) ^ (value & GC_BP_4));
+        break;
+    case GC_BP_4:
+            return (bool) ((value & GC_BP_4) ^ (value & GC_BP_5));
+        break;
+    case GC_BP_5:
+    default:
+            return (bool) ((value & GC_BP_5) ^ (value & GC_BP_6));
+        break;
+    }
+
+
 }
 
 void videoStabilizer::populateImageResult(QImage* imageDest){
@@ -112,8 +145,8 @@ void videoStabilizer::computeCorrelation(){
     uchar t_m1 = currentGrayCodeIndex ^ 1;
     memset(localMinima,0,4*sizeof(tLocalMinima));
 
-    for (uchar ii = 0; ii < 4; ii++) {
-        computeSubframeCorrelation(ii, t_m1);
+    for (uchar subframe = 0; subframe < 4; subframe++) {
+        computeSubframeCorrelation(subframe, t_m1);
     }
 }
 
@@ -153,13 +186,13 @@ end
 void videoStabilizer::computeSingleCorrelation (uchar subframe, uchar t_m1, uint m, uint n){
     int m_offset = m-SEARCH_FACTOR_P, n_offset = n - SEARCH_FACTOR_P;
 
-    for (int x = subframeLocations[subframe].lx ; x < subframeLocations[subframe].rx; x++) {     // x is width
-        for (int y = subframeLocations[subframe].ly; y < subframeLocations[subframe].ry; y++) {  // y is height
+    for (uint x = subframeLocations[subframe].lx ; x < subframeLocations[subframe].rx; x++) {     // x is width
+        for (uint y = subframeLocations[subframe].ly; y < subframeLocations[subframe].ry; y++) {  // y is height
             if (x == 240) {
                 m_offset = m_offset - 1;
             }
-            correlationMatrix[subframe][m][n] += grayCodeMatrix[currentGrayCodeIndex][x].testBit(y) ^
-                                                 grayCodeMatrix[t_m1][x+m_offset].testBit(y+n_offset);
+            correlationMatrix[subframe][m][n] += grayCodeMatrix[currentGrayCodeIndex][y].testBit(x) ^
+                                                 grayCodeMatrix[t_m1][y+n_offset].testBit(x+m_offset);
         }
     }
     m_offset = 1;

@@ -321,7 +321,7 @@ void VLCVideoWidget::captureSnapshot()
     if(isPlaying)
     {
 //        qDebug()<<"snapshot: "<< libvlc_video_take_snapshot(mediaPlayer, 0, pathVideo.toAscii().data(), 640, 480);
-        libvlc_video_take_snapshot(mediaPlayer, 0, pathVideo.toAscii().data(), 320, 240);
+        libvlc_video_take_snapshot(mediaPlayer, 0, pathVideo.toAscii().data(), 640, 480);
 
         QDir directory = QDir(pathVideo);
         QString fileName = "*";
