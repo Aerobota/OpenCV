@@ -20,8 +20,8 @@
 
 
 #define SEARCH_FACTOR_P         8
-#define HORIZ_WINDOW_M          32
-#define VERT_WINDOW_N           32
+#define HORIZ_WINDOW_M          45
+#define VERT_WINDOW_N           45
 
 class videoStabilizer : public QObject
 {
@@ -78,6 +78,29 @@ public slots:
 private:
 
     /**
+       Computes the size of the four searc windows (one for each subframe)
+    */
+    void computeSearchWindows ();
+
+    /**
+        Allocates the required memory and initializes all the data members
+    */
+    void allocateAndInitialize();
+
+    /**
+      Computes the first 9 indexes of the correlation location. These are the first 9
+      indexes in the 3SS method.
+
+      @param    subframe The subframe being used
+      @param    seedX   X coordinate of UL point in the 9-point grid
+      @param    seedY   Y coordinate of UL point in the 9-point grid
+      @param    index   It indicates which is the start index for the corr mat
+      @param    hFactor It indicates the horizontal spacing between sample points
+      @param    vFactor It inidcates the vertical spacing between sample points
+    */
+    void computeCorrelationLocations(uint subframe, uint seedX, uint seedY, uint index, uint hFactor, uint vFactor);
+
+    /**
       This function computes the graycode of an image
     @param  imageSrc        The full image for which the gray code will be computed
     @return imageGrayCode   The gray coded image
@@ -128,12 +151,12 @@ private:
     @param  subframe    The subframe beinc computed
     @note   The correlation relies on some values #defined in the class' header
     */
-    void computeSubframeCorrelation (uchar subframe, uchar t_m1);
+    void computeSubframeCorrelation (uint index, uchar subframe, uchar t_m1);
 
     /**
         Compute single correlation for m,n offset;
     */
-    void computeSingleCorrelation (uchar subframe, uchar t_m1, uint m, uint n);
+    inline void computeSingleCorrelation (uchar subframe, uchar t_m1, tcorrMatElement *element);
 
 
 

@@ -2,8 +2,7 @@
 #include <QDebug>
 #include <iostream>
 
-videoStabilizer::videoStabilizer(QRect videoSize,
-                                 QObject *parent):
+videoStabilizer::videoStabilizer(QRect videoSize, QObject *parent):
     QObject(parent),
     currentGrayCodeIndex(0),
     searchFactorWindow(2*SEARCH_FACTOR_P+1),
@@ -14,6 +13,30 @@ videoStabilizer::videoStabilizer(QRect videoSize,
     videoHeight = videoSize.height();
     videoWidth  = videoSize.width();
 
+    allocateAndInitialize();
+
+    computeSearchWindows();
+
+    for (uint subframe = 0; subframe < 4; subframe++){
+
+        computeCorrelationLocations( subframe,
+                                     subframeLocations[subframe].lx + SEARCH_FACTOR_P,
+                                     subframeLocations[subframe].ly + SEARCH_FACTOR_P,
+                                     0,
+                                    (HORIZ_WINDOW_M-2*SEARCH_FACTOR_P)/2,
+                                    (VERT_WINDOW_N-2*SEARCH_FACTOR_P)/2);
+    }
+
+}
+
+videoStabilizer::~videoStabilizer(){
+    for (int ii = 0; ii < videoHeight; ii++){
+        delete imageMatrix[ii];
+    }
+
+}
+
+void videoStabilizer::allocateAndInitialize(){
     // Initialize each subframe correlation vectors
     for (uint subframe = 0; subframe < 4; subframe++) {
         memset(correlationMatrix[subframe],0, sizeof(tcorrMatElement)*27);
@@ -29,7 +52,9 @@ videoStabilizer::videoStabilizer(QRect videoSize,
         grayCodeMatrix[1][ii].resize(videoWidth);
         imageMatrix[ii] = new uchar[videoWidth];
     }
+}
 
+void videoStabilizer::computeSearchWindows (){
     /// Compute the search windows
     // UL
     subframeLocations[0].lx = hSearchOffset/2 - HORIZ_WINDOW_M/2;
@@ -51,31 +76,40 @@ videoStabilizer::videoStabilizer(QRect videoSize,
     subframeLocations[3].rx = hSearchOffset/2 + HORIZ_WINDOW_M/2 + hSearchOffset;
     subframeLocations[3].ly = vSearchOffset/2 - VERT_WINDOW_N/2 + vSearchOffset;
     subframeLocations[3].ry = vSearchOffset/2 + VERT_WINDOW_N/2 + vSearchOffset;
-
 }
 
-videoStabilizer::~videoStabilizer(){
-    for (int ii = 0; ii < videoHeight; ii++){
-        delete imageMatrix[ii];
-    }
+void videoStabilizer::computeCorrelationLocations(uint subframe,
+                                                  uint seedX,
+                                                  uint seedY,
+                                                  uint index,
+                                                  uint hFactor,
+                                                  uint vFactor){
 
-    for (int jj = 0; jj < 4; jj++) {
-        for (int ii = 0; ii < searchFactorWindow; ii++) {
-            delete correlationMatrix[jj][ii];
+    for (uint yy = 0; yy < 3; yy++){
+        for(uint xx = 0; xx < 3; xx++){
+            correlationMatrix[subframe][index].m   = seedX  + (xx*hFactor);
+            correlationMatrix[subframe][index++].n = seedY  + (yy*vFactor);
         }
     }
 }
 
-
 void videoStabilizer::stabilizeImage(QImage* imageSrc, QImage* imageDest){
     convertImageToMatrix(imageSrc);
     getGrayCode();
-    //computeCorrelation();
+    computeCorrelation();
 
 
     populateImageResult(imageDest);
     currentGrayCodeIndex^=1;
+
+    /// TODO: Remove this and uncomment the cleanup line inside computeSubframeCorrelation (...)
+    for (uint subframe = 0; subframe < 4; subframe ++){
+        for (uint index = 0; index < 9; index++)
+            correlationMatrix[subframe][index].value = 0;
+    }
+    /// END TODO
 }
+
 
 
 void videoStabilizer::convertImageToMatrix(QImage* imageSrc){
@@ -94,14 +128,6 @@ void videoStabilizer::getGrayCode(){
 
 
 void videoStabilizer::getSubframeGrayCode (uchar subframe, BIT_PLANES bitPlane){
-//    qDebug() << subframeLocations[subframe].lx - SEARCH_FACTOR_P;
-//    qDebug() << subframeLocations[subframe].rx + SEARCH_FACTOR_P;
-//    qDebug() << subframeLocations[subframe].ly - SEARCH_FACTOR_P;
-//    qDebug() << subframeLocations[subframe].ry + SEARCH_FACTOR_P;
-//    qDebug() << grayCodeMatrix[currentGrayCodeIndex].size();
-//    qDebug() << grayCodeMatrix[currentGrayCodeIndex][10].size();
-//    qDebug() << "=================" ;
-
     for (uint ii = subframeLocations[subframe].lx - SEARCH_FACTOR_P;
              ii < subframeLocations[subframe].rx + SEARCH_FACTOR_P;
              ii++){
@@ -143,57 +169,58 @@ void videoStabilizer::populateImageResult(QImage* imageDest){
 void videoStabilizer::computeCorrelation(){
 
     uchar t_m1 = currentGrayCodeIndex ^ 1;
-    memset(localMinima,0,4*sizeof(tLocalMinima));
+    memset(localMinima,0,4*sizeof(tcorrMatElement));
 
     for (uchar subframe = 0; subframe < 4; subframe++) {
-        computeSubframeCorrelation(subframe, t_m1);
+        computeSubframeCorrelation(0, subframe, t_m1);
+
+        computeCorrelationLocations(subframe,
+                                    localMinima[subframe].m - SEARCH_FACTOR_P,
+                                    localMinima[subframe].n - SEARCH_FACTOR_P,
+                                    9,
+                                    SEARCH_FACTOR_P,
+                                    SEARCH_FACTOR_P);
+
+        getSubframeGrayCode(subframe,GC_BP_4);
+
+        computeSubframeCorrelation(9,subframe,t_m1);
     }
 }
 
-void videoStabilizer::computeSubframeCorrelation (uchar subframe, uchar t_m1){
-    /**
-S_tm1 = u(:,(size(u,2)/2)+1:end);
-Cj = zeros(2*p+1,2*p+1);
-for m = 1:2*p+1
-    for n = 1:2*p+1
-        cj_mat = bitxor(S_t(p+1:p+N,p+1:p+N),...
-                         S_tm1(m:m+N-1,n:n+N-1));
-        Cj(m,n) = sum(cj_mat(:));
-    end
-end
-*/
+void videoStabilizer::computeSubframeCorrelation (uint index, uchar subframe, uchar t_m1){
+
     localMinima[subframe].value = UINT_MAX;
 
-    for (uint m = 0; m < searchFactorWindow; m++) {
-        for (uint n = 0; n < searchFactorWindow; n++) {
+    for (uint corrIndex = index; corrIndex < (index + 9); corrIndex++){
 
-            computeSingleCorrelation(subframe, t_m1,m,n);
+        computeSingleCorrelation(subframe, t_m1,&correlationMatrix[subframe][corrIndex]);
 
-            // find the minimimum
-            if (localMinima[subframe].value > correlationMatrix[subframe][m][n]){
+        // find the minimimum
+        if (localMinima[subframe].value > correlationMatrix[subframe][corrIndex].value){
 
-                localMinima[subframe].value = correlationMatrix[subframe][m][n];
-                localMinima[subframe].m = m - SEARCH_FACTOR_P;
-                localMinima[subframe].n = n - SEARCH_FACTOR_P;
-            } // if localMinima
+            localMinima[subframe].value = correlationMatrix[subframe][corrIndex].value;
+            localMinima[subframe].m = correlationMatrix[subframe][corrIndex].m;
+            localMinima[subframe].n = correlationMatrix[subframe][corrIndex].n;
+        } // if localMinima
 
-        } // for n
-
-    } // for m
+        // cleanup: reset value for next turn around
+        //correlationMatrix[subframe][corrIndex].value = 0;
+    }
 }
 
 
-void videoStabilizer::computeSingleCorrelation (uchar subframe, uchar t_m1, uint m, uint n){
-    int m_offset = m-SEARCH_FACTOR_P, n_offset = n - SEARCH_FACTOR_P;
+inline void videoStabilizer::computeSingleCorrelation (uchar subframe, uchar t_m1, tcorrMatElement* element){
+    uint m_offset = element->m - subframeLocations[subframe].lx;
+    uint n_offset = element->n - subframeLocations[subframe].ly;
 
-    for (uint x = subframeLocations[subframe].lx ; x < subframeLocations[subframe].rx; x++) {     // x is width
-        for (uint y = subframeLocations[subframe].ly; y < subframeLocations[subframe].ry; y++) {  // y is height
-            if (x == 240) {
-                m_offset = m_offset - 1;
-            }
-            correlationMatrix[subframe][m][n] += grayCodeMatrix[currentGrayCodeIndex][y].testBit(x) ^
-                                                 grayCodeMatrix[t_m1][y+n_offset].testBit(x+m_offset);
+    for (uint x = subframeLocations[subframe].lx;
+              x < subframeLocations[subframe].rx;
+              x++) {     // x is width
+        for (uint y = subframeLocations[subframe].ly;
+                  y < subframeLocations[subframe].ry;
+                  y++) {  // y is height
+            element->value += grayCodeMatrix[currentGrayCodeIndex][y].testBit(x) ^
+                              grayCodeMatrix[t_m1][y+n_offset].testBit(x+m_offset);
         }
     }
-    m_offset = 1;
 }
