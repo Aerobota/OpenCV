@@ -39,7 +39,7 @@ videoStabilizer::~videoStabilizer(){
 void videoStabilizer::allocateAndInitialize(){
     // Initialize each subframe correlation vectors
     for (uint subframe = 0; subframe < 4; subframe++) {
-        memset(correlationMatrix[subframe],0, sizeof(tcorrMatElement)*27);
+        memset(correlationMatrix[subframe],0, sizeof(tcorrMatElement)*18);
     }
 
     /// allocate the memory of all the Matrices
@@ -52,6 +52,10 @@ void videoStabilizer::allocateAndInitialize(){
         grayCodeMatrix[1][ii].resize(videoWidth);
         imageMatrix[ii] = new uchar[videoWidth];
     }
+
+    memset(&vg_tm1, 0, sizeof(tcorrMatElement));
+    memset(&va_tm1, 0, sizeof(tcorrMatElement));
+    memset(&va, 0, sizeof(tcorrMatElement));
 }
 
 void videoStabilizer::computeSearchWindows (){
@@ -104,7 +108,7 @@ void videoStabilizer::stabilizeImage(QImage* imageSrc, QImage* imageDest){
 
     /// TODO: Remove this and uncomment the cleanup line inside computeSubframeCorrelation (...)
     for (uint subframe = 0; subframe < 4; subframe ++){
-        for (uint index = 0; index < 9; index++)
+        for (uint index = 0; index < 18; index++)
             correlationMatrix[subframe][index].value = 0;
     }
     /// END TODO
@@ -172,6 +176,7 @@ void videoStabilizer::computeCorrelation(){
     memset(localMinima,0,4*sizeof(tcorrMatElement));
 
     for (uchar subframe = 0; subframe < 4; subframe++) {
+
         computeSubframeCorrelation(0, subframe, t_m1);
 
         computeCorrelationLocations(subframe,
@@ -185,6 +190,7 @@ void videoStabilizer::computeCorrelation(){
 
         computeSubframeCorrelation(9,subframe,t_m1);
     }
+    findMotionVector();
 }
 
 void videoStabilizer::computeSubframeCorrelation (uint index, uchar subframe, uchar t_m1){
@@ -223,4 +229,74 @@ inline void videoStabilizer::computeSingleCorrelation (uchar subframe, uchar t_m
                               grayCodeMatrix[t_m1][y+n_offset].testBit(x+m_offset);
         }
     }
+}
+
+void videoStabilizer::findMotionVector (){
+
+    tcorrMatElement sortedMinima[5];
+
+    memcpy(&sortedMinima, &localMinima, sizeof(tcorrMatElement)*4);
+    memcpy(&sortedMinima[4], &vg_tm1, sizeof(tcorrMatElement));
+
+    sortLocalMinima(sortedMinima, 0, 5);
+
+
+
+    va.m = PAN_FACTOR_D*va_tm1.m + sortedMinima[2].m;
+    va.n = PAN_FACTOR_D*va_tm1.n + sortedMinima[2].n;
+
+    memcpy(&vg_tm1, &sortedMinima[2], sizeof(tcorrMatElement));
+    memcpy(&va_tm1, &va, sizeof(tcorrMatElement));
+
+}
+
+void videoStabilizer::sortLocalMinima (tcorrMatElement* sortedMinima, char beg, char end){
+/**
+
+Source:  http://alienryderflex.com/quicksort/
+
+void swap(int *a, int *b) {
+  int t=*a; *a=*b; *b=t;
+}
+void sort(int arr[], int beg, int end) {
+  if (end > beg + 1) {
+    int piv = arr[beg], l = beg + 1, r = end;
+    while (l < r) {
+      if (arr[l] <= piv)
+        l++;
+      else
+        swap(&arr[l], &arr[--r]);
+    }
+    swap(&arr[--l], &arr[beg]);
+    sort(arr, beg, l);
+    sort(arr, r, end);
+  }
+}
+
+*/
+    if (end > beg + 1){
+        tcorrMatElement piv;
+        memcpy(&piv, &sortedMinima[beg], sizeof(tcorrMatElement));
+        uchar l = beg + 1, r = end;
+
+        while (l < r){
+            if (sortedMinima[l].value <= piv.value){
+                l++;
+            } else {
+                swap(&sortedMinima[l], &sortedMinima[--r]);
+            }
+        }
+        swap(&sortedMinima[--l], &sortedMinima[beg]);
+        sortLocalMinima(sortedMinima, beg, l);
+        sortLocalMinima(sortedMinima, r, end);
+    }
+
+}
+
+inline void videoStabilizer::swap(tcorrMatElement* a, tcorrMatElement* b ){
+    tcorrMatElement t;
+    memcpy(&t,a, sizeof(tcorrMatElement));
+    memcpy(a,b, sizeof(tcorrMatElement));
+    memcpy(b,&t, sizeof(tcorrMatElement));
+
 }

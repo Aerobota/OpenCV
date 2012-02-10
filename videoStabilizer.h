@@ -22,6 +22,7 @@
 #define SEARCH_FACTOR_P         8
 #define HORIZ_WINDOW_M          45
 #define VERT_WINDOW_N           45
+#define PAN_FACTOR_D            0.9
 
 class videoStabilizer : public QObject
 {
@@ -36,6 +37,13 @@ public:
 
     ~videoStabilizer( );
 
+
+signals:
+    
+public slots:
+    void stabilizeImage(QImage* imageSrc, QImage* imageDest);
+
+private:
     typedef QVector<QBitArray>  tGrayCodeMat;
 
     typedef QVector<uchar*> tImageMat;
@@ -43,6 +51,8 @@ public:
     typedef struct _tcorrMatElement{
         int     m;
         int     n;
+        uint    x;
+        uint    y;
         uint      value;
     }tcorrMatElement;
 
@@ -69,13 +79,6 @@ public:
         GC_BP_6 = 64,
         GC_BP_7 = 128
     }BIT_PLANES;
-
-signals:
-    
-public slots:
-    void stabilizeImage(QImage* imageSrc, QImage* imageDest);
-
-private:
 
     /**
        Computes the size of the four searc windows (one for each subframe)
@@ -159,6 +162,29 @@ private:
     inline void computeSingleCorrelation (uchar subframe, uchar t_m1, tcorrMatElement *element);
 
 
+    /**
+        This function uses each subframe's minimum and the last motion vector to compute
+        the current motion vector.
+    */
+    void findMotionVector();
+
+    /**
+        This function sorts the subframe minima's and the last motion vector into an array
+
+    @param      sortedMinima    The array where the five values will be sorted; Quicksort is used as the
+                                sorting algorithm.
+    @param      beg             The beginning index for sorting
+    @param      end             The end index for sorting
+    */
+    void sortLocalMinima (tcorrMatElement* sortedMinima, char beg, char end);
+
+
+    /**
+        Helper function used to swap to tcorrMat elements
+        @param      a,b         The elements to be swapped
+    */
+    inline void swap(tcorrMatElement* a, tcorrMatElement* b );
+
 
     /** Holds the height of the video */
     int videoHeight;
@@ -193,12 +219,19 @@ private:
     This variable holds the 27 relevant values of the correlation matrix
     as defined in the 3SS method
     */
-    tcorrMatElement correlationMatrix[4][27];
+    tcorrMatElement correlationMatrix[4][18];
 
     /** This array holds the local minima of each subframe */
     tcorrMatElement localMinima[4];
 
+    /** This element contains the motion vector at time t-1*/
+    tcorrMatElement vg_tm1;
 
+    /** This element contains the motion compensation vector at time t*/
+    tcorrMatElement va;
+
+    /** This element contains the motion compensation vector at time t-1*/
+    tcorrMatElement va_tm1;
 
 };
 
