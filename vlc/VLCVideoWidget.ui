@@ -24,13 +24,6 @@
       </widget>
      </item>
      <item>
-      <widget class="QLabel" name="lbImageSnapShot">
-       <property name="text">
-        <string>-</string>
-       </property>
-      </widget>
-     </item>
-     <item>
       <widget class="QLabel" name="lbImageMatrixRGB">
        <property name="text">
         <string>-</string>
