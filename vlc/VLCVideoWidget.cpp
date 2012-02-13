@@ -117,9 +117,6 @@ void VLCVideoWidget::createControlsVLC()
     hlLabelMedia->addWidget(lbTittle);
     vlDisplay->addLayout(hlLabelMedia);    
 
-    //styleButtonRed = QString("QAbstractButton { background-color: rgb(255, 5, 0); border-color: rgb(10, 10, 10)} QAbstractButton:checked { border: 2px solid #379AC3; }");
-    //styleButtonGreen = QString("QAbstractButton { background-color: rgb(11, 255, 0); border-color: rgb(10, 10, 10)} QAbstractButton:checked { border: 2px solid #379AC3; }");
-
     ui->groupBox->setLayout(vlDisplay);
 
     acVolume = new QAction("Ver barra de volumen", this);
