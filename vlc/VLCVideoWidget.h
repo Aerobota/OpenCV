@@ -54,18 +54,19 @@ private:
     QPushButton *btOpenRTSP;
     QPushButton *btOpenFile;
     QLabel* lbFile;
-    QFileInfo*fileInfo;
-    QString nameFile;    
+    //QFileInfo*fileInfo;
+    //QString nameFile;
     void addURL(const QString url);
     QVBoxLayout *vlDisplay;    
     QHBoxLayout *hlButtonOptions;
     QLabel *lbTittle;    
     bool isPlaying;
-    QString styleButtonRed;
-    QString styleButtonGreen;
+    //QString styleButtonRed;
+    //QString styleButtonGreen;
     QString pathVideo;
     void contextMenuEvent(QContextMenuEvent *);
-    QAction* acVolume, *acMediaPosition;
+    QAction* acVolume;
+    QAction* acMediaPosition;
 
     videoStabilizer* video;
 
