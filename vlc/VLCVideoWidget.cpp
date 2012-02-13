@@ -317,7 +317,8 @@ void VLCVideoWidget::captureSnapshot()
 {
     if(isPlaying)
     {
-        qDebug()<<"snapshot: "<< libvlc_video_take_snapshot(mediaPlayer, 0, pathVideo.toAscii().data(), 640, 480);
+//        qDebug()<<"snapshot: "<< libvlc_video_take_snapshot(mediaPlayer, 0, pathVideo.toAscii().data(), 640, 480);
+        libvlc_video_take_snapshot(mediaPlayer, 0, pathVideo.toAscii().data(), 640, 480);
 
         QDir directory = QDir(pathVideo);
         QString fileName = "*";
@@ -346,10 +347,10 @@ void VLCVideoWidget::processImage(QImage image)
         img.setColorTable(image.colorTable());
     }
 
-    qDebug()<<"Size Image: "<<sizeImage.height()<<" x "<<sizeImage.width();
-    qDebug()<< "Depth: " << img.depth();
-    qDebug()<< "Image CT: " << image.colorCount();
-    qDebug()<< "Img CT: " << img.colorCount();
+//    qDebug()<<"Size Image: "<<sizeImage.height()<<" x "<<sizeImage.width();
+//    qDebug()<< "Depth: " << img.depth();
+//    qDebug()<< "Image CT: " << image.colorCount();
+//    qDebug()<< "Img CT: " << img.colorCount();
 
     video->stabilizeImage(&image,&img);
     ui->lbImageMatrixRGB->setPixmap(QPixmap::fromImage(img));

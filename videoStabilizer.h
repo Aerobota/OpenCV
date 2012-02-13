@@ -19,10 +19,17 @@
 
 
 
-#define SEARCH_FACTOR_P         8
-#define HORIZ_WINDOW_M          45
-#define VERT_WINDOW_N           45
-#define PAN_FACTOR_D            0.9
+#define SEARCH_FACTOR_P         9
+#define HORIZ_WINDOW_M          25
+#define VERT_WINDOW_N           25
+#define PAN_FACTOR_D            0.75
+
+
+/**
+source: http://developer.gnome.org/glib/2.31/glib-Standard-Macros.html#MAX:CAPS
+*/
+#define MAX(a, b)  (((a) > (b)) ? (a) : (b))
+#define MIN(a, b)  (((a) < (b)) ? (a) : (b))
 
 class videoStabilizer : public QObject
 {
@@ -81,7 +88,26 @@ private:
     }BIT_PLANES;
 
     /**
-       Computes the size of the four searc windows (one for each subframe)
+       Computes the size of the four search windows (one for each subframe) as follows
+
+       (lx,ly) -------------------------------------------------
+               |       P                               P       |
+               |<-P-> ----------------------------------- <-P->|
+               |      |(m=0,n=0)                        |      |
+               |      |                                 |      |
+               |      |                                 |      |
+               |      |                                 |      |
+               |      |                                 |      |
+               |      |                                 |      |
+               |      |                                 |      |
+               |      |                                 |      |
+               |      |                                 |      |
+               |      |                                 |      |
+               |      |                                 |      |
+               |<-P-> ----------------------------------- <-P->|
+               |      P                                 P      |
+               ------------------------------------------------- (rx,ry)
+
     */
     void computeSearchWindows ();
 
