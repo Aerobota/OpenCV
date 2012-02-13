@@ -27,16 +27,15 @@ VLCVideoWidget::VLCVideoWidget(const QString path, QWidget *parent) :
     connect(timer, SIGNAL(timeout()), this, SLOT(updateInterface()));
     timer->start(50);
 
-    QDir* tempDirectory = new QDir("/");;
-    pathVideo = "/";
+    QDir* tempDirectory = new QDir(QCoreApplication::applicationDirPath());;
+    //pathVideo = QCoreApplication::applicationDirPath()+"/";
 
-    if(!tempDirectory->exists("videoEstable"))
+    if(!tempDirectory->exists("pathEstable"))
     {
-        if(tempDirectory->mkpath("videoEstable"))
-        {
-            pathVideo = "/videoEstable/";
-        }
+        tempDirectory->mkpath("pathEstable");
     }
+
+    pathVideo = QCoreApplication::applicationDirPath()+"/pathEstable/";
 
     setWindowTitle("Estabilizacion de Video");
     qDebug() << "CHECK END VLCVIDEOWIDGET "<<QTime::currentTime().toString("HHmmss");
@@ -46,15 +45,13 @@ void VLCVideoWidget::createInstanceVLC(const QString url)
 {
     char const *argv[] =
     {
-        //"-vvvvv",
-        //"--no-video-title-show",
+        "--no-video-title-show",        /* nor the filename displayed */
+        "--no-sub-autodetect-file",     /* we don't want subtitles */
+        "--no-disable-screensaver",     /* we don't want interfaces */
+        "--no-snapshot-preview",        /* no blending in dummy vout */
         "--no-skip-frames",
-        //"--no-audio",
-        //"--plugin-path", VLC_TREE "/modules",
-        "--ignore-config", //Don't use VLC's config files
-        "--rtsp-caching=100",
-        "--no-snapshot-preview"
-        //"--{rtsp,http,sout-mux}-caching"
+        "--ignore-config",              /*Don't use VLC's config files */
+        "--rtsp-caching=100"
     };
     int argc = sizeof( argv ) / sizeof( *argv );
 
@@ -116,9 +113,6 @@ void VLCVideoWidget::createControlsVLC()
     lbTittle->setText("");
     hlLabelMedia->addWidget(lbTittle);
     vlDisplay->addLayout(hlLabelMedia);    
-
-    styleButtonRed = QString("QAbstractButton { background-color: rgb(255, 5, 0); border-color: rgb(10, 10, 10)} QAbstractButton:checked { border: 2px solid #379AC3; }");
-    styleButtonGreen = QString("QAbstractButton { background-color: rgb(11, 255, 0); border-color: rgb(10, 10, 10)} QAbstractButton:checked { border: 2px solid #379AC3; }");
 
     ui->groupBox->setLayout(vlDisplay);
 

@@ -48,24 +48,21 @@ private:
 
     QSlider* slVolume;
     QSlider* slMediaPosition;
-    DataMatrix::MColor matriz[704][480];
+    //DataMatrix::MColor matriz[704][480];
     QPushButton *btPlay;
     QPushButton *btStop;    
     QPushButton *btOpenRTSP;
     QPushButton *btOpenFile;
-    QLabel* lbFile;
-    QFileInfo*fileInfo;
-    QString nameFile;    
+    QLabel* lbFile;    
     void addURL(const QString url);
     QVBoxLayout *vlDisplay;    
     QHBoxLayout *hlButtonOptions;
     QLabel *lbTittle;    
-    bool isPlaying;
-    QString styleButtonRed;
-    QString styleButtonGreen;
+    bool isPlaying;    
     QString pathVideo;
     void contextMenuEvent(QContextMenuEvent *);
-    QAction* acVolume, *acMediaPosition;
+    QAction* acVolume;
+    QAction* acMediaPosition;
 
     videoStabilizer* video;
 
@@ -86,18 +83,54 @@ protected:
      **/
     void createControlsVLC();
 
-private slots:
-    void changePosition(int pos);
-    void changeVolume(int vol);
-    void play();
-    void stop();
-    void openRTSP();
-    void openFile();
-    void updateInterface();
-    void captureSnapshot();
-    void processImage(QImage image);
-
 public slots:
+    /**
+     * @brief This method allows change the position of the video feed.
+     *
+     * @param pos Advanced the current position
+     **/
+    void changePosition(int pos);
+    /**
+     * @brief This method allows change the volume level.
+     *
+     * @param vol New volume level
+     **/
+    void changeVolume(int vol);
+    /**
+     * @brief This method playback starts.
+     */
+    void play();
+    /**
+     * @brief This method playback stops.
+     */
+    void stop();
+    /**
+     * @brief This method open URL RTSP.
+     */
+    void openRTSP();
+    /**
+     * @brief This method open file in a directory.
+     */
+    void openFile();
+    /**
+     * @brief This method updates the status of the video interface.
+     */
+    void updateInterface();
+    /**
+     * @brief This method captures an image of the player.
+     */
+    void captureSnapshot();
+    /**
+     * @brief This method allows process the captured image.
+     *
+     * @param image The captured image
+     **/
+    void processImage(QImage image);
+    /**
+     * @brief This method allows assign new path to video open/store.
+     *
+     * @param path The path where the video open/store
+     **/
     void changePATHVideo(const QString& path);    
 };
 
