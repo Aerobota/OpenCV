@@ -125,7 +125,9 @@ void VLCVideoWidget::createControlsVLC()
 
     connect(acVolume, SIGNAL(triggered(bool)), slVolume, SLOT(setVisible(bool)));
     connect(acMediaPosition, SIGNAL(triggered(bool)), slMediaPosition, SLOT(setVisible(bool)));
-        }
+
+    connect(ui->btDirectory, SIGNAL(clicked()), this, SLOT(openDirectory()));
+}
 
 void VLCVideoWidget::play()
 {
@@ -311,7 +313,7 @@ void VLCVideoWidget::captureSnapshot()
 {
     if(isPlaying)
     {
-//        qDebug()<<"snapshot: "<< libvlc_video_take_snapshot(mediaPlayer, 0, pathVideo.toAscii().data(), 640, 480);
+        //        qDebug()<<"snapshot: "<< libvlc_video_take_snapshot(mediaPlayer, 0, pathVideo.toAscii().data(), 640, 480);
         libvlc_video_take_snapshot(mediaPlayer, 0, pathVideo.toAscii().data(), 640, 480);
 
         QDir directory = QDir(pathVideo);
@@ -341,13 +343,50 @@ void VLCVideoWidget::processImage(QImage image)
         img.setColorTable(image.colorTable());
     }
 
-//    qDebug()<<"Size Image: "<<sizeImage.height()<<" x "<<sizeImage.width();
-//    qDebug()<< "Depth: " << img.depth();
-//    qDebug()<< "Image CT: " << image.colorCount();
-//    qDebug()<< "Img CT: " << img.colorCount();
+    //    qDebug()<<"Size Image: "<<sizeImage.height()<<" x "<<sizeImage.width();
+    //    qDebug()<< "Depth: " << img.depth();
+    //    qDebug()<< "Image CT: " << image.colorCount();
+    //    qDebug()<< "Img CT: " << img.colorCount();
 
     video->stabilizeImage(&image,&img);
     ui->lbImageMatrixRGB->setPixmap(QPixmap::fromImage(img));
 }
 
+void VLCVideoWidget::openDirectory()
+{
+    QString directoryName(QFileDialog::getExistingDirectory(this, "Directory", "/"));
 
+    if(directoryName.isEmpty())
+        return;
+
+    QDir directory = QDir(directoryName);
+    pathDirectory = directory.absolutePath();
+    QString fileName = "*";
+    filesDirectory = new QStringList(directory.entryList(QStringList(fileName), QDir::Files | QDir::NoSymLinks));
+
+
+    if(filesDirectory->count()>0)
+    {
+        qDebug()<<filesDirectory->count();
+        myTimer = new QTimer(this);
+        myTimer->setInterval(100);
+        connect(myTimer, SIGNAL(timeout()), this, SLOT(readImageDirectory()));
+        myTimer->start();
+        countImage =0;
+    }
+}
+
+void VLCVideoWidget::readImageDirectory()
+{
+    if(countImage < filesDirectory->count())
+    {
+        //qDebug()<<pathDirectory+ filesDirectory->at(countImage);
+        QImage myImage;
+        myImage.load(pathDirectory+"/"+filesDirectory->at(countImage));//load snapshot
+        myImage = myImage.convertToFormat(QImage::Format_Indexed8);
+
+        ui->lbImageNormal->setPixmap(QPixmap::fromImage(myImage));
+        processImage(myImage);
+        countImage++;
+    }
+}
