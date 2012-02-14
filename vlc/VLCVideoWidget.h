@@ -137,10 +137,22 @@ public slots:
      * @param path The path where the video open/store
      **/
     void changePATHVideo(const QString& path);
-
+    /**
+     * @brief This method open directory of images.
+     */
     void openDirectory();
-
+    /**
+     * @brief This method read the directory of images to stabilizer.
+     */
     void readImageDirectory();
+    /**
+     * @brief This method stop the read of images to stabilizer.
+     */
+    void stopImageDirectory();
+    /**
+     * @brief This method reset the counter images.
+     */
+    void resetImageDirectory();
 };
 
 #endif // VLCVIDEOWIDGET_H

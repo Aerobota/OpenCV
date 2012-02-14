@@ -15,7 +15,8 @@ VLCVideoWidget::VLCVideoWidget(const QString path, QWidget *parent) :
         QWidget(parent),
         pathVideo(path),
         ui(new Ui::VLCVideoWidget),
-        video(NULL)
+        video(NULL),
+        myTimer(NULL)
 {
     ui->setupUi(this);
 
@@ -128,6 +129,8 @@ void VLCVideoWidget::createControlsVLC()
     connect(acMediaPosition, SIGNAL(triggered(bool)), slMediaPosition, SLOT(setVisible(bool)));
 
     connect(ui->btDirectory, SIGNAL(clicked()), this, SLOT(openDirectory()));
+    connect(ui->btStop, SIGNAL(clicked()), this, SLOT(stopImageDirectory()));
+    connect(ui->btReset, SIGNAL(clicked()), this, SLOT(resetImageDirectory()));
 }
 
 void VLCVideoWidget::play()
@@ -380,8 +383,7 @@ void VLCVideoWidget::openDirectory()
 void VLCVideoWidget::readImageDirectory()
 {
     if(countImage < filesDirectory->count())
-    {
-        //qDebug()<<pathDirectory+ filesDirectory->at(countImage);
+    {        
         QImage myImage;
         myImage.load(pathDirectory+"/"+filesDirectory->at(countImage));//load snapshot
         myImage = myImage.convertToFormat(QImage::Format_Indexed8);
@@ -389,5 +391,35 @@ void VLCVideoWidget::readImageDirectory()
         ui->lbImageNormal->setPixmap(QPixmap::fromImage(myImage));
         processImage(myImage);
         countImage++;
+    }
+}
+
+void VLCVideoWidget::stopImageDirectory()
+{
+    if (myTimer != NULL )
+    {
+        if(myTimer->isActive())
+        {
+            myTimer->stop();
+
+            ui->lbImageNormal->setText("-");
+            ui->lbImageNormal->resize(20,20);
+            ui->lbImageMatrixRGB->setText("-");
+            ui->lbImageMatrixRGB->resize(20,20);
+        }
+    }
+}
+
+void VLCVideoWidget::resetImageDirectory()
+{
+    if (myTimer != NULL )
+    {
+        if(myTimer->isActive())
+        {
+            if(filesDirectory->count()>0)
+            {
+                countImage =0;
+            }
+        }
     }
 }
