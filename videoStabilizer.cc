@@ -148,6 +148,7 @@ void videoStabilizer::getSubframeGrayCode (uchar subframe, BIT_PLANES bitPlane){
                   jj < subframeLocations[subframe].ry + SEARCH_FACTOR_P;
                   jj++){
            grayCodeMatrix[currentGrayCodeIndex][jj].setBit(ii, getByteGrayCode(imageMatrix[jj][ii], bitPlane));
+           qDebug() << "(" << jj <<"," << ii << ") = " << grayCodeMatrix[currentGrayCodeIndex][jj].testBit(ii);
         }
     }
 }
