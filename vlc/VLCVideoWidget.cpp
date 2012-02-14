@@ -14,7 +14,8 @@
 VLCVideoWidget::VLCVideoWidget(const QString path, QWidget *parent) :
         QWidget(parent),
         pathVideo(path),
-        ui(new Ui::VLCVideoWidget)
+        ui(new Ui::VLCVideoWidget),
+        video(NULL)
 {
     ui->setupUi(this);
 
@@ -369,7 +370,7 @@ void VLCVideoWidget::openDirectory()
     {
         qDebug()<<filesDirectory->count();
         myTimer = new QTimer(this);
-        myTimer->setInterval(100);
+        myTimer->setInterval(34);
         connect(myTimer, SIGNAL(timeout()), this, SLOT(readImageDirectory()));
         myTimer->start();
         countImage =0;
