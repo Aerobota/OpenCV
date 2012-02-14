@@ -66,6 +66,11 @@ private:
 
     videoStabilizer* video;
 
+    QStringList* filesDirectory;
+    QTimer* myTimer;
+    int countImage;
+    QString pathDirectory;
+
 protected:
     void closeEvent(QCloseEvent *event);
     /**
@@ -131,7 +136,11 @@ public slots:
      *
      * @param path The path where the video open/store
      **/
-    void changePATHVideo(const QString& path);    
+    void changePATHVideo(const QString& path);
+
+    void openDirectory();
+
+    void readImageDirectory();
 };
 
 #endif // VLCVIDEOWIDGET_H
