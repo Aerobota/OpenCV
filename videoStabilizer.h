@@ -12,17 +12,15 @@
 #include <QImage>
 #include <QBitArray>
 #include <limits>
-/**
-@def    This defines determine the  the two bitplanes to be used in the
-        Gray code calculation.
-*/
 
 
+#define SEARCH_FACTOR_P         12
+#define HORIZ_WINDOW_M          76
+#define VERT_WINDOW_N           76
+#define PAN_FACTOR_D            0.95
 
-#define SEARCH_FACTOR_P         9
-#define HORIZ_WINDOW_M          25
-#define VERT_WINDOW_N           25
-#define PAN_FACTOR_D            0.75
+#define MAX_M_MOTION            35
+#define MAX_N_MOTION            35
 
 
 /**
@@ -90,11 +88,11 @@ private:
     /**
        Computes the size of the four search windows (one for each subframe) as follows
 
-       (lx,ly) -------------------------------------------------
+               -------------------------------------------------
                |       P                               P       |
                |<-P-> ----------------------------------- <-P->|
                |      |(m=0,n=0)                        |      |
-               |      |                                 |      |
+               |      |(lx,ly)                          |      |
                |      |                                 |      |
                |      |                                 |      |
                |      |                                 |      |
@@ -117,8 +115,8 @@ private:
     void allocateAndInitialize();
 
     /**
-      Computes the first 9 indexes of the correlation location. These are the first 9
-      indexes in the 3SS method.
+      Computes 9 indexes of the correlation location. These come in blocks of 9 as described
+      in the 3SS method.
 
       @param    subframe The subframe being used
       @param    seedX   X coordinate of UL point in the 9-point grid
@@ -132,14 +130,14 @@ private:
     /**
       This function computes the graycode of an image
     @param  imageSrc        The full image for which the gray code will be computed
-    @return imageGrayCode   The gray coded image
+    @return imageGrayCode   The gray coded image in the four subframes of size (M+2*p) x (N+2*p)
     */
     void getGrayCode();
 
     /**
         This function computes the gray code of each subframe's search window
 
-    @param  subframe    The subframe for which to compute the gray code
+    @param  subframe    The subframe for which to compute the gray code of size (M+2*p) x (N+2*p)
     */
     void getSubframeGrayCode (uchar subframe, BIT_PLANES bitPlane = GC_BP_5);
 
