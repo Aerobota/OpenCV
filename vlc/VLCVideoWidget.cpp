@@ -353,7 +353,13 @@ void VLCVideoWidget::processImage(QImage image)
     //    qDebug()<< "Img CT: " << img.colorCount();
 
     video->stabilizeImage(&image,&img);
-    ui->lbImageMatrixRGB->setPixmap(QPixmap::fromImage(img));
+
+    if(!tImage.isNull())
+        ui->lbImageMatrixRGBSub->setPixmap(QPixmap::fromImage(subtract(tImage, img).scaled(500, 500, Qt::KeepAspectRatio)));
+
+    tImage =  img;
+
+    ui->lbImageMatrixRGB->setPixmap(QPixmap::fromImage(img.scaled(500, 500, Qt::KeepAspectRatio)));
 }
 
 void VLCVideoWidget::openDirectory()
@@ -377,7 +383,7 @@ void VLCVideoWidget::openDirectory()
         connect(myTimer, SIGNAL(timeout()), this, SLOT(readImageDirectory()));
         myTimer->start();
         countImage =0;
-    }
+    }    
 }
 
 void VLCVideoWidget::readImageDirectory()
@@ -388,7 +394,17 @@ void VLCVideoWidget::readImageDirectory()
         myImage.load(pathDirectory+"/"+filesDirectory->at(countImage));//load snapshot
         myImage = myImage.convertToFormat(QImage::Format_Indexed8);
 
-        ui->lbImageNormal->setPixmap(QPixmap::fromImage(myImage));
+        ui->lbImageNormal->setPixmap(QPixmap::fromImage(myImage.scaled(500, 500, Qt::KeepAspectRatio)));
+
+        if(countImage>0)
+        {
+            QImage tempImage;
+            tempImage.load(pathDirectory+"/"+filesDirectory->at(countImage-1));
+            tempImage = tempImage.convertToFormat(QImage::Format_Indexed8);
+
+            ui->lbImageNormalSub->setPixmap(QPixmap::fromImage(subtract(myImage, tempImage).scaled(500, 500, Qt::KeepAspectRatio)));
+        }
+
         processImage(myImage);
         countImage++;
     }
@@ -422,4 +438,22 @@ void VLCVideoWidget::resetImageDirectory()
             }
         }
     }
+}
+
+QImage VLCVideoWidget::subtract(QImage firstImage, QImage secondImage)
+{
+    int width = firstImage.width() < secondImage.width() ? firstImage.width() : secondImage.width();
+    int height = firstImage.height() < secondImage.height() ? firstImage.height() : secondImage.height();
+    int x, y;
+
+    for(y=0;y<height;y++)
+        for(x=0;x<width;x++)
+        {
+        int r = firstImage.pixelIndex(x, y) - secondImage.pixelIndex(x, y);
+
+        r = r < 60 ? 0 : r;
+        firstImage.setPixel(x, y, r);
+    }
+
+    return firstImage;
 }
