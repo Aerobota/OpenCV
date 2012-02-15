@@ -14,13 +14,13 @@
 #include <limits>
 
 
-#define SEARCH_FACTOR_P         8
-#define HORIZ_WINDOW_M          55
-#define VERT_WINDOW_N           55
+#define SEARCH_FACTOR_P         10
+#define HORIZ_WINDOW_M          75
+#define VERT_WINDOW_N           75
 #define PAN_FACTOR_D            0.95
 
-#define MAX_M_MOTION            35
-#define MAX_N_MOTION            35
+#define MAX_M_MOTION            45
+#define MAX_N_MOTION            45
 
 
 /**
@@ -30,7 +30,7 @@ source: http://developer.gnome.org/glib/2.31/glib-Standard-Macros.html#MAX:CAPS
 #define MIN(a, b)  (((a) < (b)) ? (a) : (b))
 
 
-#define DO_FULL_CORRELATION     1
+#define DO_FULL_CORRELATION     0
 
 class videoStabilizer : public QObject
 {
@@ -213,14 +213,14 @@ private:
     @param      beg             The beginning index for sorting
     @param      end             The end index for sorting
     */
-    void sortLocalMinima (tcorrMatElement* sortedMinima, char beg, char end);
+    void sortLocalMinima (int *sortedMinima, char beg, char end);
 
 
     /**
         Helper function used to swap to tcorrMat elements
         @param      a,b         The elements to be swapped
     */
-    inline void swap(tcorrMatElement* a, tcorrMatElement* b );
+    inline void swap(int* a, int* b );
 
 
     /** Holds the height of the video */
