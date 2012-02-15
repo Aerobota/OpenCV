@@ -17,6 +17,19 @@ videoStabilizer::videoStabilizer(QRect videoSize, QObject *parent):
 
     computeSearchWindows();
 
+#if DO_FULL_CORRELATION
+    for (uchar subframe = 0; subframe < 4; subframe++) {
+        for (int m = 0; m < 2*SEARCH_FACTOR_P+1; m++ ){
+            for (int n = 0; n < 2*SEARCH_FACTOR_P+1; n++){
+                fullCorrelationMatrix[subframe][n][m].m = m -SEARCH_FACTOR_P;
+                fullCorrelationMatrix[subframe][n][m].n = n -SEARCH_FACTOR_P;
+                fullCorrelationMatrix[subframe][n][m].value = 0;
+            }
+        }
+    }
+
+#else
+
     for (uint subframe = 0; subframe < 4; subframe++){
 
         computeCorrelationLocations( subframe,
@@ -26,6 +39,8 @@ videoStabilizer::videoStabilizer(QRect videoSize, QObject *parent):
                                     searchFactorWindow,
                                     searchFactorWindow);
     }
+
+ #endif
 
 }
 
@@ -148,7 +163,7 @@ void videoStabilizer::getSubframeGrayCode (uchar subframe, BIT_PLANES bitPlane){
                   jj < subframeLocations[subframe].ry + SEARCH_FACTOR_P;
                   jj++){
            grayCodeMatrix[currentGrayCodeIndex][jj].setBit(ii, getByteGrayCode(imageMatrix[jj][ii], bitPlane));
-           qDebug() << "(" << jj <<"," << ii << ") = " << grayCodeMatrix[currentGrayCodeIndex][jj].testBit(ii);
+//           qDebug() << "(" << jj <<"," << ii << ") = " << grayCodeMatrix[currentGrayCodeIndex][jj].testBit(ii);
         }
     }
 }
@@ -197,6 +212,11 @@ void videoStabilizer::computeCorrelation(){
 
     for (uchar subframe = 0; subframe < 4; subframe++) {
 
+#if DO_FULL_CORRELATION
+
+        computeFullCorrelation(subframe, t_m1);
+#else
+
         computeSubframeCorrelation(0, subframe, t_m1);
 
         computeCorrelationLocations(subframe,
@@ -210,6 +230,7 @@ void videoStabilizer::computeCorrelation(){
         //getSubframeGrayCode(subframe,GC_BP_4);
 
         computeSubframeCorrelation(9,subframe,t_m1);
+#endif
     }
 }
 
@@ -228,6 +249,23 @@ void videoStabilizer::computeSubframeCorrelation (uint index, uchar subframe, uc
     }
 }
 
+
+void videoStabilizer::computeFullCorrelation (uchar subframe, uchar tm_1){
+    localMinima[subframe].value = UINT_MAX;
+
+    for (int m = 0; m < 2*SEARCH_FACTOR_P+1; m++ ){
+        for (int n = 0; n < 2*SEARCH_FACTOR_P+1; n++){
+            fullCorrelationMatrix[subframe][n][m].value = 0;
+
+            computeSingleCorrelation(subframe,tm_1,&fullCorrelationMatrix[subframe][n][m]);
+
+            // find the minimimum
+            if (localMinima[subframe].value > fullCorrelationMatrix[subframe][n][m].value){
+                memcpy(&localMinima[subframe], &(fullCorrelationMatrix[subframe][n][m]), sizeof(tcorrMatElement));
+            } // if localMinima
+        }
+    }
+}
 
 inline void videoStabilizer::computeSingleCorrelation (uchar subframe, uchar t_m1, tcorrMatElement* element){
 //    p = 8;
