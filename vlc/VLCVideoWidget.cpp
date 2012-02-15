@@ -352,8 +352,9 @@ void VLCVideoWidget::processImage(QImage image)
     //    qDebug()<< "Image CT: " << image.colorCount();
     //    qDebug()<< "Img CT: " << img.colorCount();
 
-    video->stabilizeImage(&image,&img);
-    ui->lbImageMatrixRGB->setPixmap(QPixmap::fromImage(img));
+    video->stabilizeImage(&image,&img);    
+    ui->lbImageMatrixRGB->setPixmap(QPixmap::fromImage(img.scaled(500, 500, Qt::KeepAspectRatio)));
+    //ui->lbImageMatrixRGBSub->setPixmap(QPixmap::fromImage(img.scaled(500, 500, Qt::KeepAspectRatio)));
 }
 
 void VLCVideoWidget::openDirectory()
@@ -388,7 +389,21 @@ void VLCVideoWidget::readImageDirectory()
         myImage.load(pathDirectory+"/"+filesDirectory->at(countImage));//load snapshot
         myImage = myImage.convertToFormat(QImage::Format_Indexed8);
 
-        ui->lbImageNormal->setPixmap(QPixmap::fromImage(myImage));
+        ui->lbImageNormal->setPixmap(QPixmap::fromImage(myImage.scaled(500, 500, Qt::KeepAspectRatio)));
+
+        if(countImage>0)
+        {
+//            QImage tempImage;
+
+//            tempImage.load(pathDirectory+"/"+filesDirectory->at(countImage-1));
+//            tempImage = tempImage.convertToFormat(QImage::Format_Indexed8);
+
+//            //static QImage imgtempImage.data_ptr(), tempImage.width(), tempImage.height(), QImage::Format_Indexed8);
+//            //img.setColorTable(tempImage.colorTable());
+
+//            ui->lbImageNormalSub->setPixmap(QPixmap::fromImage(tempImage.scaled(500, 500, Qt::KeepAspectRatio)));
+        }
+
         processImage(myImage);
         countImage++;
     }
