@@ -352,9 +352,14 @@ void VLCVideoWidget::processImage(QImage image)
     //    qDebug()<< "Image CT: " << image.colorCount();
     //    qDebug()<< "Img CT: " << img.colorCount();
 
-    video->stabilizeImage(&image,&img);    
+    video->stabilizeImage(&image,&img);
+
+    if(!tImage.isNull())
+        ui->lbImageMatrixRGBSub->setPixmap(QPixmap::fromImage(subtract(tImage, img).scaled(500, 500, Qt::KeepAspectRatio)));
+
+    tImage =  img;
+
     ui->lbImageMatrixRGB->setPixmap(QPixmap::fromImage(img.scaled(500, 500, Qt::KeepAspectRatio)));
-    //ui->lbImageMatrixRGBSub->setPixmap(QPixmap::fromImage(img.scaled(500, 500, Qt::KeepAspectRatio)));
 }
 
 void VLCVideoWidget::openDirectory()
@@ -378,7 +383,7 @@ void VLCVideoWidget::openDirectory()
         connect(myTimer, SIGNAL(timeout()), this, SLOT(readImageDirectory()));
         myTimer->start();
         countImage =0;
-    }
+    }    
 }
 
 void VLCVideoWidget::readImageDirectory()
@@ -393,15 +398,11 @@ void VLCVideoWidget::readImageDirectory()
 
         if(countImage>0)
         {
-//            QImage tempImage;
+            QImage tempImage;
+            tempImage.load(pathDirectory+"/"+filesDirectory->at(countImage-1));
+            tempImage = tempImage.convertToFormat(QImage::Format_Indexed8);
 
-//            tempImage.load(pathDirectory+"/"+filesDirectory->at(countImage-1));
-//            tempImage = tempImage.convertToFormat(QImage::Format_Indexed8);
-
-//            //static QImage imgtempImage.data_ptr(), tempImage.width(), tempImage.height(), QImage::Format_Indexed8);
-//            //img.setColorTable(tempImage.colorTable());
-
-//            ui->lbImageNormalSub->setPixmap(QPixmap::fromImage(tempImage.scaled(500, 500, Qt::KeepAspectRatio)));
+            ui->lbImageNormalSub->setPixmap(QPixmap::fromImage(subtract(myImage, tempImage).scaled(500, 500, Qt::KeepAspectRatio)));
         }
 
         processImage(myImage);
@@ -437,4 +438,22 @@ void VLCVideoWidget::resetImageDirectory()
             }
         }
     }
+}
+
+QImage VLCVideoWidget::subtract(QImage firstImage, QImage secondImage)
+{
+    int width = firstImage.width() < secondImage.width() ? firstImage.width() : secondImage.width();
+    int height = firstImage.height() < secondImage.height() ? firstImage.height() : secondImage.height();
+    int x, y;
+
+    for(y=0;y<height;y++)
+        for(x=0;x<width;x++)
+        {
+        int r = firstImage.pixelIndex(x, y) - secondImage.pixelIndex(x, y);
+
+        r = r < 60 ? 0 : r;
+        firstImage.setPixel(x, y, r);
+    }
+
+    return firstImage;
 }

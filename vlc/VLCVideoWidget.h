@@ -70,6 +70,7 @@ private:
     QTimer* myTimer;
     int countImage;
     QString pathDirectory;
+    QImage tImage;
 
 protected:
     void closeEvent(QCloseEvent *event);
@@ -153,6 +154,14 @@ public slots:
      * @brief This method reset the counter images.
      */
     void resetImageDirectory();
+    /**
+     * @brief This method subtracts the second image from the first.
+     *
+     * @param firstImage first image
+     * @param secondImage second image
+     * @return the image subtracted
+     */
+    QImage subtract(QImage firstImage, QImage secondImage);
 };
 
 #endif // VLCVIDEOWIDGET_H
