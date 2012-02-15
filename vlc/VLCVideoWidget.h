@@ -151,6 +151,10 @@ public slots:
      */
     void stopImageDirectory();
     /**
+     * @brief This method read the next image of directory.
+     */
+    void nextImageDirectory();
+    /**
      * @brief This method reset the counter images.
      */
     void resetImageDirectory();

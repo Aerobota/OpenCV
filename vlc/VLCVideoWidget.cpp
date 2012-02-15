@@ -131,6 +131,7 @@ void VLCVideoWidget::createControlsVLC()
     connect(ui->btDirectory, SIGNAL(clicked()), this, SLOT(openDirectory()));
     connect(ui->btStop, SIGNAL(clicked()), this, SLOT(stopImageDirectory()));
     connect(ui->btReset, SIGNAL(clicked()), this, SLOT(resetImageDirectory()));
+    connect(ui->btNextImage, SIGNAL(clicked()), this, SLOT(nextImageDirectory()));
 }
 
 void VLCVideoWidget::play()
@@ -417,11 +418,23 @@ void VLCVideoWidget::stopImageDirectory()
         if(myTimer->isActive())
         {
             myTimer->stop();
+            ui->btStop->setText("Start");
+        }
+        else
+        {
+            myTimer->start();
+            ui->btStop->setText("Stop");
+        }
+    }
+}
 
-            ui->lbImageNormal->setText("-");
-            ui->lbImageNormal->resize(20,20);
-            ui->lbImageMatrixRGB->setText("-");
-            ui->lbImageMatrixRGB->resize(20,20);
+void VLCVideoWidget::nextImageDirectory()
+{
+    if (myTimer != NULL )
+    {
+        if(!myTimer->isActive())
+        {
+            readImageDirectory();
         }
     }
 }
