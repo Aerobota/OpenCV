@@ -51,27 +51,50 @@ class QVideoDecoder
 
       // Helpers
       virtual void dumpFormat(ffmpeg::AVFormatContext *ic,int index,const char *url,int is_output);
+      /**
+        \brief Debug function: saves a frame as PPM
+      **/
       virtual void saveFramePPM(ffmpeg::AVFrame *pFrame, int width, int height, int iFrame);
 
-      // Seek
+      /**
+         Decodes the video stream until the first frame with number larger or equal than 'after' is found.
+
+         Returns:
+         - true if a frame is found, false otherwise.
+         - the image as a QImage if img is non-null
+         - time frame time, if frametime is non-null
+         - the frame number, if framenumber is non-null
+
+         All times are in milliseconds.
+      **/
       virtual bool decodeSeekFrame(int after);
 
    public:
-      // Public interface
+      /**
+         \brief Constructor - opens a video on later openFile call
+      **/
       QVideoDecoder();
+      /**
+         \brief Constructor - opens directly a video
+      **/
       QVideoDecoder(QString file);
       virtual ~QVideoDecoder();
-
       virtual bool openFile(QString file);
       virtual void close();
-
       virtual bool getFrame(QImage&img,int *effectiveframenumber=0,int *effectiveframetime=0,int *desiredframenumber=0,int *desiredframetime=0);
+      /**
+         \brief Decodes the next frame in the video stream
+      **/
       virtual bool seekNextFrame();
+      /**
+        \brief Seek to millisecond
+      **/
       virtual bool seekMs(int ts);
+      /**
+        \brief Seek to frame
+      **/
       virtual bool seekFrame(int64_t frame);
       virtual int getVideoLengthMs();
-
-
       virtual bool isOk();
 };
 
