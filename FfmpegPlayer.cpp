@@ -2,21 +2,28 @@
 #include "ui_FfmpegPlayer.h"
 
 FfmpegPlayer::FfmpegPlayer(QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::FfmpegPlayer),
-    video(NULL)
+        QWidget(parent),
+        ui(new Ui::FfmpegPlayer),
+        video(NULL)
 {
     ui->setupUi(this);
 
+    reloj = new QTimer(this);
+    reloj->setInterval(1000);
+
+    connect(ui->btTimer, SIGNAL(clicked()), this, SLOT(changeStatusTimer()));
     connect(ui->btOpenVideo, SIGNAL(clicked()), this, SLOT(on_actionLoad_video_triggered()));
 
     connect(ui->pushButtonNextFrame_2, SIGNAL(clicked()), this, SLOT(on_pushButtonNextFrame_clicked()));
+    connect(reloj, SIGNAL(timeout()), this, SLOT(on_pushButtonNextFrame_clicked()));
     connect(ui->pushButtonSeekFrame_2, SIGNAL(clicked()), this, SLOT(on_pushButtonSeekFrame_clicked()));
     connect(ui->pushButtonSeekMillisecond_2, SIGNAL(clicked()), this, SLOT(on_pushButtonSeekMillisecond_clicked()));
 }
 
 FfmpegPlayer::~FfmpegPlayer()
 {
+    delete reloj;
+
     delete ui;
 }
 
@@ -39,12 +46,12 @@ void FfmpegPlayer::on_actionQuit_triggered()
 
 void FfmpegPlayer::image2Pixmap(QImage &img,QPixmap &pixmap)
 {
-   // Convert the QImage to a QPixmap for display
-   pixmap = QPixmap(img.size());
-   QPainter painter;
-   painter.begin(&pixmap);
-   painter.drawImage(0,0,img);
-   painter.end();
+    // Convert the QImage to a QPixmap for display
+    pixmap = QPixmap(img.size());
+    QPainter painter;
+    painter.begin(&pixmap);
+    painter.drawImage(0,0,img);
+    painter.end();
 }
 
 
@@ -60,11 +67,11 @@ void FfmpegPlayer::image2Pixmap(QImage &img,QPixmap &pixmap)
 void FfmpegPlayer::on_actionLoad_video_triggered()
 {
     // Prompt a video to load
-   QString fileName = QFileDialog::getOpenFileName(this, "Load Video",QString(),"Video (*.avi *.asf *.mpg *.mp4)");
-   if(!fileName.isNull())
-   {
-      loadVideo(fileName);
-   }
+    QString fileName = QFileDialog::getOpenFileName(this, "Load Video",QString(),"Video (*.avi *.asf *.mpg *.mp4)");
+    if(!fileName.isNull())
+    {
+        loadVideo(fileName);
+    }
 }
 
 /**
@@ -72,32 +79,32 @@ void FfmpegPlayer::on_actionLoad_video_triggered()
 **/
 void FfmpegPlayer::loadVideo(QString fileName)
 {
-   decoder.openFile(fileName);
-   if(decoder.isOk()==false)
-   {
-      QMessageBox::critical(this,"Error","Error loading the video");
-      return;
-   }
+    decoder.openFile(fileName);
+    if(decoder.isOk()==false)
+    {
+        QMessageBox::critical(this,"Error","Error loading the video");
+        return;
+    }
 
-   // Get a new frame
-   nextFrame();
-   // Display a frame
-   displayFrame();
+    // Get a new frame
+    nextFrame();
+    // Display a frame
+    displayFrame();
 
 }
 
 void FfmpegPlayer::errLoadVideo()
 {
-   QMessageBox::critical(this,"Error","Load a video first");
+    QMessageBox::critical(this,"Error","Load a video first");
 }
 bool FfmpegPlayer::checkVideoLoadOk()
 {
-   if(decoder.isOk()==false)
-   {
-      errLoadVideo();
-      return false;
-   }
-   return true;
+    if(decoder.isOk()==false)
+    {
+        errLoadVideo();
+        return false;
+    }
+    return true;
 }
 
 /**
@@ -105,51 +112,51 @@ bool FfmpegPlayer::checkVideoLoadOk()
 **/
 void FfmpegPlayer::displayFrame()
 {
-   // Check we've loaded a video successfully
-   if(!checkVideoLoadOk())
-      return;
+    // Check we've loaded a video successfully
+    if(!checkVideoLoadOk())
+        return;
 
-   QImage img;
+    QImage img;
 
-   // Decode a frame
-   int et,en;
-   if(!decoder.getFrame(img,&en,&et))
-   {
-      QMessageBox::critical(this,"Error","Error decoding the frame");
-      return;
-   }
-   // Convert the QImage to a QPixmap for display
+    // Decode a frame
+    int et,en;
+    if(!decoder.getFrame(img,&en,&et))
+    {
+        QMessageBox::critical(this,"Error","Error decoding the frame");
+        return;
+    }
+    // Convert the QImage to a QPixmap for display
 
-   QPixmap p;
-   image2Pixmap(img,p);
+    QPixmap p;
+    image2Pixmap(img,p);
 
-   img = img.convertToFormat(QImage::Format_Indexed8);
+    img = img.convertToFormat(QImage::Format_Indexed8);
 
-   if(!tImageO.isNull())
-   {
-       //tImageO = tImageO.convertToFormat(QImage::Format_Indexed8);
-       ui->lbImageOriginT->setPixmap(QPixmap::fromImage(subtract(tImageO, img).scaled(500, 500, Qt::KeepAspectRatio)));
-   }
+    if(!tImageO.isNull())
+    {
+        //tImageO = tImageO.convertToFormat(QImage::Format_Indexed8);
+        ui->lbImageOriginT->setPixmap(QPixmap::fromImage(subtract(tImageO, img).scaled(500, 500, Qt::KeepAspectRatio)));
+    }
 
     tImageO = img;
 
-   // Display the QPixmap
-   ui->lbImageOrigin->setPixmap(p.scaled(500, 500, Qt::KeepAspectRatio));
+    // Display the QPixmap
+    ui->lbImageOrigin->setPixmap(p.scaled(500, 500, Qt::KeepAspectRatio));
 
-   //img = img.convertToFormat(QImage::Format_Indexed8);
-   processImage(img);
+    //img = img.convertToFormat(QImage::Format_Indexed8);
+    processImage(img);
 
-   // Display the video size
-   ui->labelVideoInfo->setText(QString("Size %2 ms. Display: #%3 @ %4 ms.").arg(decoder.getVideoLengthMs()).arg(en).arg(et));
+    // Display the video size
+    ui->labelVideoInfo->setText(QString("Size %2 ms. Display: #%3 @ %4 ms.").arg(decoder.getVideoLengthMs()).arg(en).arg(et));
 
 }
 
 void FfmpegPlayer::nextFrame()
 {
-   if(!decoder.seekNextFrame())
-   {
-      QMessageBox::critical(this,"Error","seekNextFrame failed");
-   }
+    if(!decoder.seekNextFrame())
+    {
+        QMessageBox::critical(this,"Error","seekNextFrame failed");
+    }
 }
 
 /**
@@ -157,8 +164,8 @@ void FfmpegPlayer::nextFrame()
 **/
 void FfmpegPlayer::on_pushButtonNextFrame_clicked()
 {
-   nextFrame();
-   displayFrame();
+    nextFrame();
+    displayFrame();
 }
 
 
@@ -166,54 +173,54 @@ void FfmpegPlayer::on_pushButtonNextFrame_clicked()
 
 void FfmpegPlayer::on_pushButtonSeekFrame_clicked()
 {
-   // Check we've loaded a video successfully
-   if(!checkVideoLoadOk())
-      return;
+    // Check we've loaded a video successfully
+    if(!checkVideoLoadOk())
+        return;
 
-   bool ok;
+    bool ok;
 
-   int frame = ui->lineEditFrame_2->text().toInt(&ok);
-   if(!ok || frame < 0)
-   {
-      QMessageBox::critical(this,"Error","Invalid frame number");
-      return;
-   }
+    int frame = ui->lineEditFrame_2->text().toInt(&ok);
+    if(!ok || frame < 0)
+    {
+        QMessageBox::critical(this,"Error","Invalid frame number");
+        return;
+    }
 
-   // Seek to the desired frame
-   if(!decoder.seekFrame(frame))
-   {
-      QMessageBox::critical(this,"Error","Seek failed");
-      return;
-   }
-   // Display the frame
-   displayFrame();
+    // Seek to the desired frame
+    if(!decoder.seekFrame(frame))
+    {
+        QMessageBox::critical(this,"Error","Seek failed");
+        return;
+    }
+    // Display the frame
+    displayFrame();
 
 }
 
 
 void FfmpegPlayer::on_pushButtonSeekMillisecond_clicked()
 {
-   // Check we've loaded a video successfully
-   if(!checkVideoLoadOk())
-      return;
+    // Check we've loaded a video successfully
+    if(!checkVideoLoadOk())
+        return;
 
-   bool ok;
+    bool ok;
 
-   int ms = ui->lineEditMillisecond_2->text().toInt(&ok);
-   if(!ok || ms < 0)
-   {
-      QMessageBox::critical(this,"Error","Invalid time");
-      return;
-   }
+    int ms = ui->lineEditMillisecond_2->text().toInt(&ok);
+    if(!ok || ms < 0)
+    {
+        QMessageBox::critical(this,"Error","Invalid time");
+        return;
+    }
 
-   // Seek to the desired frame
-   if(!decoder.seekMs(ms))
-   {
-      QMessageBox::critical(this,"Error","Seek failed");
-      return;
-   }
-   // Display the frame
-   displayFrame();
+    // Seek to the desired frame
+    if(!decoder.seekMs(ms))
+    {
+        QMessageBox::critical(this,"Error","Seek failed");
+        return;
+    }
+    // Display the frame
+    displayFrame();
 
 
 }
@@ -235,56 +242,56 @@ void FfmpegPlayer::on_pushButtonSeekMillisecond_clicked()
 **/
 void FfmpegPlayer::on_actionSave_synthetic_video_triggered()
 {
-   QString title("Save a synthetic video");
-   QString fileName = QFileDialog::getSaveFileName(this, title,QString(),"Video (*.avi *.asf *.mpg)");
-   if(!fileName.isNull())
-   {
-      GenerateSyntheticVideo(fileName);
-   }
+    QString title("Save a synthetic video");
+    QString fileName = QFileDialog::getSaveFileName(this, title,QString(),"Video (*.avi *.asf *.mpg)");
+    if(!fileName.isNull())
+    {
+        GenerateSyntheticVideo(fileName);
+    }
 }
 
 void FfmpegPlayer::GenerateSyntheticVideo(QString filename)
 {
-   int width=640;
-   int height=480;
-   int bitrate=1000000;
-   int gop = 20;
+    int width=640;
+    int height=480;
+    int bitrate=1000000;
+    int gop = 20;
 
-   // The image on which we draw the frames
-   QImage frame(width,height,QImage::Format_RGB32);     // Only RGB32 is supported
+    // The image on which we draw the frames
+    QImage frame(width,height,QImage::Format_RGB32);     // Only RGB32 is supported
 
-   // A painter to help us draw
-   QPainter painter(&frame);
-   painter.setBrush(Qt::red);
-   painter.setPen(Qt::white);
+    // A painter to help us draw
+    QPainter painter(&frame);
+    painter.setBrush(Qt::red);
+    painter.setPen(Qt::white);
 
-   // Create the encoder
-   QVideoEncoder encoder;
-   encoder.createFile(filename,width,height,bitrate,gop);
+    // Create the encoder
+    QVideoEncoder encoder;
+    encoder.createFile(filename,width,height,bitrate,gop);
 
-   QEventLoop evt;      // we use an event loop to allow for paint events to show on-screen the generated video
+    QEventLoop evt;      // we use an event loop to allow for paint events to show on-screen the generated video
 
-   // Generate a few hundred frames
-   int size=0;
-   for(unsigned i=0;i<500;i++)
-   {
-      // Clear the frame
-      painter.fillRect(frame.rect(),Qt::red);
+    // Generate a few hundred frames
+    int size=0;
+    for(unsigned i=0;i<500;i++)
+    {
+        // Clear the frame
+        painter.fillRect(frame.rect(),Qt::red);
 
-      // Frame number
-      painter.drawText(frame.rect(),Qt::AlignCenter,QString("Frame %1\nLast frame was %2 bytes").arg(i).arg(size));
+        // Frame number
+        painter.drawText(frame.rect(),Qt::AlignCenter,QString("Frame %1\nLast frame was %2 bytes").arg(i).arg(size));
 
-      // Display the frame, and processes events to allow for screen redraw
-      QPixmap p;
-      image2Pixmap(frame,p);
-      ui->lbImageOrigin->setPixmap(p);
-      evt.processEvents();
+        // Display the frame, and processes events to allow for screen redraw
+        QPixmap p;
+        image2Pixmap(frame,p);
+        ui->lbImageOrigin->setPixmap(p);
+        evt.processEvents();
 
-      size=encoder.encodeImage(frame);
-      printf("Encoded: %d\n",size);
-   }
+        size=encoder.encodeImage(frame);
+        printf("Encoded: %d\n",size);
+    }
 
-   encoder.close();
+    encoder.close();
 
 }
 
@@ -331,4 +338,18 @@ QImage FfmpegPlayer::subtract(QImage firstImage, QImage secondImage)
     }
 
     return firstImage;
+}
+
+void FfmpegPlayer::changeStatusTimer()
+{
+    if(reloj->isActive())
+    {
+        reloj->stop();
+        ui->btTimer->setText("Start");
+    }
+    else
+    {
+        reloj->start();
+        ui->btTimer->setText("Stop");
+    }
 }
