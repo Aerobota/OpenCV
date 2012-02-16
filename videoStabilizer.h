@@ -14,13 +14,13 @@
 #include <limits>
 
 
-#define SEARCH_FACTOR_P         12
-#define HORIZ_WINDOW_M          76
-#define VERT_WINDOW_N           76
+#define SEARCH_FACTOR_P         10
+#define HORIZ_WINDOW_M          115
+#define VERT_WINDOW_N           115
 #define PAN_FACTOR_D            0.95
 
-#define MAX_M_MOTION            35
-#define MAX_N_MOTION            35
+#define MAX_M_MOTION            45
+#define MAX_N_MOTION            45
 
 
 /**
@@ -29,6 +29,9 @@ source: http://developer.gnome.org/glib/2.31/glib-Standard-Macros.html#MAX:CAPS
 #define MAX(a, b)  (((a) > (b)) ? (a) : (b))
 #define MIN(a, b)  (((a) < (b)) ? (a) : (b))
 
+
+#define DO_FULL_CORRELATION     0
+
 class videoStabilizer : public QObject
 {
     Q_OBJECT
@@ -36,7 +39,6 @@ public:
     /**
       This is the class constructor
     @param  videoSize           A Rect of the first frame in the video
-    @return firstGrayCodeBit    The first in the two bits used for the gray code computation
     */
     videoStabilizer(QRect videoSize, QObject *parent = 0);
 
@@ -101,7 +103,7 @@ private:
                |      |                                 |      |
                |      |                                 |      |
                |      |                                 |      |
-               |      |                                 |      |
+               |      |                         (rx,ry) |      |
                |<-P-> ----------------------------------- <-P->|
                |      P                                 P      |
                ------------------------------------------------- (rx,ry)
@@ -175,10 +177,21 @@ private:
         This function computes the Subframe correlation measures. It works over
     Gray coded images.
 
-    @param  subframe    The subframe beinc computed
+    @param  index       The index in the 3SS method
+    @param  subframe    The subframe being computed
+    @param  tm_1        The index of time t-1 in the gray code matrix
     @note   The correlation relies on some values #defined in the class' header
     */
     void computeSubframeCorrelation (uint index, uchar subframe, uchar t_m1);
+
+    /**
+    This function computes the full correlation matrix of size 2P+1 x 2P+1
+
+    @param  subframe    The subframe being computed
+    @param  tm_1        The index of time t-1 in the gray code matrix
+    */
+    void computeFullCorrelation (uchar subframe, uchar tm_1);
+
 
     /**
         Compute single correlation for m,n offset;
@@ -200,14 +213,14 @@ private:
     @param      beg             The beginning index for sorting
     @param      end             The end index for sorting
     */
-    void sortLocalMinima (tcorrMatElement* sortedMinima, char beg, char end);
+    void sortLocalMinima (int *sortedMinima, char beg, char end);
 
 
     /**
         Helper function used to swap to tcorrMat elements
         @param      a,b         The elements to be swapped
     */
-    inline void swap(tcorrMatElement* a, tcorrMatElement* b );
+    inline void swap(int* a, int* b );
 
 
     /** Holds the height of the video */
@@ -244,6 +257,11 @@ private:
     as defined in the 3SS method
     */
     tcorrMatElement correlationMatrix[4][18];
+
+    /**
+    This matrix holds a full blown correlation matrix instead of the 9 points used in the 3SS method
+    */
+    tcorrMatElement fullCorrelationMatrix[4][2*SEARCH_FACTOR_P+1][2*SEARCH_FACTOR_P+1];
 
     /** This array holds the local minima of each subframe */
     tcorrMatElement localMinima[4];
