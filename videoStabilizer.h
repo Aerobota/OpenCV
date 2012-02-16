@@ -15,8 +15,8 @@
 
 
 #define SEARCH_FACTOR_P         10
-#define HORIZ_WINDOW_M          75
-#define VERT_WINDOW_N           75
+#define HORIZ_WINDOW_M          115
+#define VERT_WINDOW_N           115
 #define PAN_FACTOR_D            0.95
 
 #define MAX_M_MOTION            45
