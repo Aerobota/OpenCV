@@ -15,12 +15,12 @@
 
 
 #define SEARCH_FACTOR_P         10
-#define HORIZ_WINDOW_M          115
-#define VERT_WINDOW_N           115
-#define PAN_FACTOR_D            0.95
+#define HORIZ_WINDOW_M          75
+#define VERT_WINDOW_N           75
+#define PAN_FACTOR_D            0.9
 
-#define MAX_M_MOTION            45
-#define MAX_N_MOTION            45
+#define MAX_M_MOTION            65
+#define MAX_N_MOTION            65
 
 
 /**
@@ -147,7 +147,7 @@ private:
 
     @param  subframe    The subframe for which to compute the gray code of size (M+2*p) x (N+2*p)
     */
-    void getSubframeGrayCode (uchar subframe, BIT_PLANES bitPlane = GC_BP_5);
+    void getSubframeGrayCode (uchar subframe, BIT_PLANES bitPlane = GC_BP_4);
 
 
     /**
@@ -165,7 +165,7 @@ private:
                         bitplanes used are #defined in the header file.
     @param  bitPlane    The bitplane used to compute the graycode @see @enum BIT_PLANES
     */
-    inline bool getByteGrayCode(uchar value, BIT_PLANES bitPlane = GC_BP_5);
+    inline bool getByteGrayCode(uchar value, BIT_PLANES bitPlane = GC_BP_4);
 
     /**
         This function creates the de-rotated image to paint.

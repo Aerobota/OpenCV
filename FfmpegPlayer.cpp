@@ -9,7 +9,7 @@ FfmpegPlayer::FfmpegPlayer(QWidget *parent) :
     ui->setupUi(this);
 
     reloj = new QTimer(this);
-    reloj->setInterval(1000);
+    reloj->setInterval(24);
 
     connect(ui->btTimer, SIGNAL(clicked()), this, SLOT(changeStatusTimer()));
     connect(ui->btOpenVideo, SIGNAL(clicked()), this, SLOT(on_actionLoad_video_triggered()));

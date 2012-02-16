@@ -148,7 +148,7 @@ void videoStabilizer::stabilizeImage(QImage* imageSrc, QImage* imageDest){
         averageTime = (uint)(timerTicks*100)/(ticksPerSecond);
         aveCount = 1;
         timerTicks = 0;
-        qDebug() << averageTime;
+        //qDebug() << averageTime;
     }
 
     aveCount++;
