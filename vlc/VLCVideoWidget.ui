@@ -91,6 +91,13 @@
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="btNextImage">
+       <property name="text">
+        <string>&gt;&gt;</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="btReset">
        <property name="toolTip">
         <string>Resets the counter to stabilize images</string>
