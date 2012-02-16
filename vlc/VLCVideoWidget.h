@@ -27,6 +27,13 @@
 
 #include"videoStabilizer.h"
 
+typedef unsigned char uchar;
+struct ctx
+{
+    uint16_t* pixel;
+    //SDL_mutex *mutex;
+};
+
 namespace Ui {
     class VLCVideoWidget;
 }
@@ -71,6 +78,7 @@ private:
     int countImage;
     QString pathDirectory;
     QImage tImage;
+    struct ctx ctx;
 
 protected:
     void closeEvent(QCloseEvent *event);
@@ -166,6 +174,11 @@ public slots:
      * @return the image subtracted
      */
     QImage subtract(QImage firstImage, QImage secondImage);
+
+    static void display(void *data, void *id);
+    static void unlock(void *data, void *id, void *const *p_pixels);
+    static void *lock(void *data, void **p_pixels);
+
 };
 
 #endif // VLCVIDEOWIDGET_H

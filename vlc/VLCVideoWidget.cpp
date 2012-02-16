@@ -11,6 +11,11 @@
 
 #define qtu( i ) ((i).toUtf8().constData())
 
+#define WIDTH 1024
+#define HEIGHT 768
+#define VIDEOWIDTH 720
+#define VIDEOHEIGHT 576
+
 VLCVideoWidget::VLCVideoWidget(const QString path, QWidget *parent) :
         QWidget(parent),
         pathVideo(path),
@@ -22,6 +27,8 @@ VLCVideoWidget::VLCVideoWidget(const QString path, QWidget *parent) :
 
     createInstanceVLC("");
     mediaPlayer = libvlc_media_player_new_from_media(media);
+    //libvlc_video_set_callbacks(mediaPlayer, lock, unlock, display, &ctx);
+    //libvlc_video_set_format(mediaPlayer, "RV16", VIDEOWIDTH, VIDEOHEIGHT, VIDEOWIDTH*2);
     createDisplayVLC();
     createControlsVLC();
 
@@ -59,6 +66,8 @@ void VLCVideoWidget::createInstanceVLC(const QString url)
 
     instance = libvlc_new(argc, argv);
     media = libvlc_media_new_path(instance, qtu(url));
+
+
 }
 
 void VLCVideoWidget::createDisplayVLC()
@@ -469,4 +478,25 @@ QImage VLCVideoWidget::subtract(QImage firstImage, QImage secondImage)
     }
 
     return firstImage;
+}
+
+void VLCVideoWidget::display(void *data, void *id)
+{
+   (void) data;
+      assert(id == NULL);
+}
+
+void VLCVideoWidget::unlock(void *data, void *id, void *const *p_pixels)
+{
+   struct ctx *ctx = (struct ctx*)data;
+      /* VLC just rendered the video, but we can also render stuff */
+      uint16_t *pixels = (uint16_t*)*p_pixels;
+      assert(id == NULL);
+}
+
+void *VLCVideoWidget::lock(void *data, void **p_pixels)
+{
+   struct ctx *ctx = (struct ctx*)data;
+      *p_pixels = ctx->pixel;
+      return NULL;
 }
