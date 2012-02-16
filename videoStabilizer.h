@@ -50,7 +50,12 @@ signals:
 public slots:
     void stabilizeImage(QImage* imageSrc, QImage* imageDest);
 
+private slots:
+    void timeCount();
 private:
+    uint timerTicks;
+    QTimer *lengthTimer;
+
     typedef QVector<QBitArray>  tGrayCodeMat;
 
     typedef QVector<uchar*> tImageMat;

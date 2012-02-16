@@ -1,13 +1,15 @@
 #include "videoStabilizer.h"
 #include <QDebug>
 #include <iostream>
+#include <QTimer>
 
 videoStabilizer::videoStabilizer(QRect videoSize, QObject *parent):
     QObject(parent),
     currentGrayCodeIndex(0),
     searchFactorWindow(SEARCH_FACTOR_P/2),
     vSearchOffset(videoSize.height()/2),
-    hSearchOffset(videoSize.width()/2)
+    hSearchOffset(videoSize.width()/2),
+    timerTicks(0)
 {
     //TODO: Validate height and width > 0 and less than a sensible number
     videoHeight = videoSize.height();
@@ -42,13 +44,19 @@ videoStabilizer::videoStabilizer(QRect videoSize, QObject *parent):
 
  #endif
 
+    lengthTimer = new QTimer(this);
+    connect(lengthTimer,SIGNAL(timeout()), this, SLOT(timeCount()));
+
+    lengthTimer->start(1);
+
+
 }
 
 videoStabilizer::~videoStabilizer(){
     for (int ii = 0; ii < videoHeight; ii++){
         delete imageMatrix[ii];
     }
-
+    lengthTimer->stop();
 }
 
 void videoStabilizer::allocateAndInitialize(){
@@ -119,20 +127,20 @@ void videoStabilizer::computeCorrelationLocations(uint subframe,
 }
 
 void videoStabilizer::stabilizeImage(QImage* imageSrc, QImage* imageDest){
-
+    static uint ticks [7];
+    //timerTicks = 0;
 //    if (currentGrayCodeIndex == 1) {
+        ticks [0] = timerTicks;
         convertImageToMatrix(imageSrc);
-
+        ticks [1] = timerTicks;
         getGrayCode();
-
+        ticks [2] = timerTicks;
         computeCorrelation();
-
+        ticks [3] = timerTicks;
         findMotionVector();
-
-        //    qDebug() << vg_tm1.m <<"," << vg_tm1.n << "," << vg_tm1.value;
-
+        ticks [4] = timerTicks;
         populateImageResult(imageDest);
-
+        ticks [5] = timerTicks;
         for (uint subframe = 0; subframe < 4; subframe ++){
             for (uint index = 0; index < 18; index++)
                 correlationMatrix[subframe][index].value = 0;
@@ -140,11 +148,13 @@ void videoStabilizer::stabilizeImage(QImage* imageSrc, QImage* imageDest){
 //    }
 
     currentGrayCodeIndex^=1;
-
+    qDebug () << ticks[5];
 
 }
 
-
+void videoStabilizer::timeCount (){
+    timerTicks++;
+}
 
 void videoStabilizer::convertImageToMatrix(QImage* imageSrc){
     for (int ii=0; ii < videoHeight; ii++){
@@ -169,7 +179,6 @@ void videoStabilizer::getSubframeGrayCode (uchar subframe, BIT_PLANES bitPlane){
                   jj < subframeLocations[subframe].ry + SEARCH_FACTOR_P;
                   jj++){
            grayCodeMatrix[currentGrayCodeIndex][jj].setBit(ii, getByteGrayCode(imageMatrix[jj][ii], bitPlane));
-//           qDebug() << "(" << jj <<"," << ii << ") = " << grayCodeMatrix[currentGrayCodeIndex][jj].testBit(ii);
         }
     }
 }
