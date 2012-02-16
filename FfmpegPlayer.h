@@ -5,6 +5,7 @@
 #include <QMessageBox>
 #include <QPainter>
 #include <QFileDialog>
+#include <QTimer>
 
 #include "QVideoEncoder.h"
 #include "QVideoDecoder.h"
@@ -50,6 +51,7 @@ private:
     Ui::FfmpegPlayer *ui;
     QImage tImageP;
     QImage tImageO;
+    QTimer* reloj;
 
 
 
@@ -60,6 +62,8 @@ private slots:
     void on_pushButtonSeekFrame_clicked();
     void on_actionLoad_video_triggered();
     void on_actionQuit_triggered();
+
+    void changeStatusTimer();
 };
 
 #endif // FFMPEGPLAYER_H

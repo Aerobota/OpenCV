@@ -77,6 +77,13 @@
         </widget>
        </item>
        <item>
+        <widget class="QPushButton" name="btTimer">
+         <property name="text">
+          <string>Start</string>
+         </property>
+        </widget>
+       </item>
+       <item>
         <spacer name="horizontalSpacer_6">
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
@@ -104,23 +111,6 @@
         <widget class="QLineEdit" name="lineEditFrame_2"/>
        </item>
        <item>
-        <spacer name="horizontalSpacer_4">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>40</width>
-           <height>20</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-      </layout>
-     </item>
-     <item>
-      <layout class="QHBoxLayout" name="horizontalLayout_5">
-       <item>
         <widget class="QPushButton" name="pushButtonSeekMillisecond_2">
          <property name="text">
           <string>Seek to millisecond</string>
@@ -131,7 +121,7 @@
         <widget class="QLineEdit" name="lineEditMillisecond_2"/>
        </item>
        <item>
-        <spacer name="horizontalSpacer_5">
+        <spacer name="horizontalSpacer_4">
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
          </property>
