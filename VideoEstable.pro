@@ -6,7 +6,7 @@
 
 include(vlc/VLC.pri)
 
-QT       += core gui opengl network
+QT       += core gui opengl network phonon multimedia
 
 TARGET = VideoEstable
 TEMPLATE = app
@@ -15,11 +15,13 @@ ICON = icons/macx.icns
 
 SOURCES += main.cpp\
     DataMatrix.cpp \
-    videoStabilizer.cc
+    videoStabilizer.cc \
+    PhononPlayer.cpp
 
 HEADERS  += \
     DataMatrix.h \
-    videoStabilizer.h
+    videoStabilizer.h \
+    PhononPlayer.h
 
 RESOURCES += \
     resources.qrc
