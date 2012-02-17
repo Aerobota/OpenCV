@@ -14,10 +14,10 @@
 #include <limits>
 
 
-#define SEARCH_FACTOR_P         10
-#define HORIZ_WINDOW_M          75
-#define VERT_WINDOW_N           75
-#define PAN_FACTOR_D            0.9
+#define SEARCH_FACTOR_P         6
+#define HORIZ_WINDOW_M          25
+#define VERT_WINDOW_N           25
+#define PAN_FACTOR_D            0.95
 
 #define MAX_M_MOTION            65
 #define MAX_N_MOTION            65
@@ -30,7 +30,7 @@ source: http://developer.gnome.org/glib/2.31/glib-Standard-Macros.html#MAX:CAPS
 #define MIN(a, b)  (((a) < (b)) ? (a) : (b))
 
 
-#define DO_FULL_CORRELATION     0
+#define DO_FULL_CORRELATION     1
 
 class videoStabilizer : public QObject
 {

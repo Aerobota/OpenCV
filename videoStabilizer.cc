@@ -125,10 +125,12 @@ void videoStabilizer::computeCorrelationLocations(uint subframe,
 
 void videoStabilizer::stabilizeImage(QImage* imageSrc, QImage* imageDest){
     static long ticks;
-    static uchar aveCount = 1;
+    static uchar aveCount = 0;
     static struct tms timeVal;
+    static clock_t st_time;
+    static clock_t en_time;
 
-    times(&timeVal);
+    st_time = times(&timeVal);
     ticks = timeVal.tms_stime;
 
     convertImageToMatrix(imageSrc);
@@ -145,15 +147,15 @@ void videoStabilizer::stabilizeImage(QImage* imageSrc, QImage* imageDest){
     currentGrayCodeIndex^=1;
 
     if (aveCount == 10){
-        averageTime = (uint)(timerTicks*100)/(ticksPerSecond);
-        aveCount = 1;
+        averageTime = (uint)(timerTicks)/(10);
+        aveCount = 0;
         timerTicks = 0;
-        //qDebug() << averageTime;
+        qDebug() << averageTime;
     }
 
     aveCount++;
-    times(&timeVal);
-    timerTicks = timerTicks + (timeVal.tms_stime - ticks);
+    en_time = times(&timeVal);
+    timerTicks += (en_time - st_time);
 }
 
 void videoStabilizer::getAverageProcessTime(uint *timeInMs){
