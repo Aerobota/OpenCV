@@ -34,8 +34,13 @@ protected:
 
     void image2Pixmap(QImage &img,QPixmap &pixmap);
 
-    // Decoder demo
+    /**
+      Decode and display a frame
+    **/
     void displayFrame();
+    /**
+      Prompts the user for the video to load, and display the first frame
+    **/
     void loadVideo(QString fileName);
     void errLoadVideo();
     bool checkVideoLoadOk();
@@ -52,11 +57,20 @@ private:
     QImage tImageP;
     QImage tImageO;
     QTimer* reloj;
+    bool activeCorrection;
 
 
 
 private slots:
+    /**
+      Prompts the user for a file
+      Create the file
+      Pass the file to the video generation function (alternatively the file name could be passed)
+    **/
     void on_actionSave_synthetic_video_triggered();
+    /**
+      Display next frame
+    **/
     void on_pushButtonNextFrame_clicked();
     void on_pushButtonSeekMillisecond_clicked();
     void on_pushButtonSeekFrame_clicked();
@@ -64,6 +78,7 @@ private slots:
     void on_actionQuit_triggered();
 
     void changeStatusTimer();
+    void enableCorrection(bool status);
 };
 
 #endif // FFMPEGPLAYER_H

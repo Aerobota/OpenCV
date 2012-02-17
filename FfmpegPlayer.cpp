@@ -4,7 +4,8 @@
 FfmpegPlayer::FfmpegPlayer(QWidget *parent) :
         QWidget(parent),
         ui(new Ui::FfmpegPlayer),
-        video(NULL)
+        video(NULL),
+        activeCorrection(false)
 {
     ui->setupUi(this);
 
@@ -18,6 +19,7 @@ FfmpegPlayer::FfmpegPlayer(QWidget *parent) :
     connect(reloj, SIGNAL(timeout()), this, SLOT(on_pushButtonNextFrame_clicked()));
     connect(ui->pushButtonSeekFrame_2, SIGNAL(clicked()), this, SLOT(on_pushButtonSeekFrame_clicked()));
     connect(ui->pushButtonSeekMillisecond_2, SIGNAL(clicked()), this, SLOT(on_pushButtonSeekMillisecond_clicked()));
+    connect(ui->cxCorrection, SIGNAL(clicked(bool)), this, SLOT(enableCorrection(bool)));
 }
 
 FfmpegPlayer::~FfmpegPlayer()
@@ -54,16 +56,6 @@ void FfmpegPlayer::image2Pixmap(QImage &img,QPixmap &pixmap)
     painter.end();
 }
 
-
-
-
-
-/******************************************************************************
-*******************************************************************************
-* Decoder demo   Decoder demo   Decoder demo   Decoder demo   Decoder demo
-*******************************************************************************
-******************************************************************************/
-
 void FfmpegPlayer::on_actionLoad_video_triggered()
 {
     // Prompt a video to load
@@ -74,9 +66,6 @@ void FfmpegPlayer::on_actionLoad_video_triggered()
     }
 }
 
-/**
-  Prompts the user for the video to load, and display the first frame
-**/
 void FfmpegPlayer::loadVideo(QString fileName)
 {
     decoder.openFile(fileName);
@@ -90,13 +79,13 @@ void FfmpegPlayer::loadVideo(QString fileName)
     nextFrame();
     // Display a frame
     displayFrame();
-
 }
 
 void FfmpegPlayer::errLoadVideo()
 {
     QMessageBox::critical(this,"Error","Load a video first");
 }
+
 bool FfmpegPlayer::checkVideoLoadOk()
 {
     if(decoder.isOk()==false)
@@ -104,12 +93,10 @@ bool FfmpegPlayer::checkVideoLoadOk()
         errLoadVideo();
         return false;
     }
+
     return true;
 }
 
-/**
-  Decode and display a frame
-**/
 void FfmpegPlayer::displayFrame()
 {
     // Check we've loaded a video successfully
@@ -132,13 +119,16 @@ void FfmpegPlayer::displayFrame()
 
     img = img.convertToFormat(QImage::Format_Indexed8);
 
-    if(!tImageO.isNull())
+    if(activeCorrection)
     {
-        //tImageO = tImageO.convertToFormat(QImage::Format_Indexed8);
-        ui->lbImageOriginT->setPixmap(QPixmap::fromImage(subtract(tImageO, img).scaled(500, 500, Qt::KeepAspectRatio)));
-    }
+        if(!tImageO.isNull())
+        {
+            //tImageO = tImageO.convertToFormat(QImage::Format_Indexed8);
+            ui->lbImageOriginT->setPixmap(QPixmap::fromImage(subtract(tImageO, img).scaled(500, 500, Qt::KeepAspectRatio)));
+        }
 
-    tImageO = img;
+        tImageO = img;
+    }
 
     // Display the QPixmap
     ui->lbImageOrigin->setPixmap(p.scaled(500, 500, Qt::KeepAspectRatio));
@@ -148,7 +138,6 @@ void FfmpegPlayer::displayFrame()
 
     // Display the video size
     ui->labelVideoInfo->setText(QString("Size %2 ms. Display: #%3 @ %4 ms.").arg(decoder.getVideoLengthMs()).arg(en).arg(et));
-
 }
 
 void FfmpegPlayer::nextFrame()
@@ -159,17 +148,11 @@ void FfmpegPlayer::nextFrame()
     }
 }
 
-/**
-  Display next frame
-**/
 void FfmpegPlayer::on_pushButtonNextFrame_clicked()
 {
     nextFrame();
     displayFrame();
 }
-
-
-
 
 void FfmpegPlayer::on_pushButtonSeekFrame_clicked()
 {
@@ -194,9 +177,7 @@ void FfmpegPlayer::on_pushButtonSeekFrame_clicked()
     }
     // Display the frame
     displayFrame();
-
 }
-
 
 void FfmpegPlayer::on_pushButtonSeekMillisecond_clicked()
 {
@@ -221,25 +202,8 @@ void FfmpegPlayer::on_pushButtonSeekMillisecond_clicked()
     }
     // Display the frame
     displayFrame();
-
-
 }
 
-
-
-
-
-/******************************************************************************
-*******************************************************************************
-* Encoder demo   Encoder demo   Encoder demo   Encoder demo   Encoder demo
-*******************************************************************************
-******************************************************************************/
-
-/**
-  Prompts the user for a file
-  Create the file
-  Pass the file to the video generation function (alternatively the file name could be passed)
-**/
 void FfmpegPlayer::on_actionSave_synthetic_video_triggered()
 {
     QString title("Save a synthetic video");
@@ -307,17 +271,15 @@ void FfmpegPlayer::processImage(QImage image)
         img.setColorTable(image.colorTable());
     }
 
-    //    qDebug()<<"Size Image: "<<sizeImage.height()<<" x "<<sizeImage.width();
-    //    qDebug()<< "Depth: " << img.depth();
-    //    qDebug()<< "Image CT: " << image.colorCount();
-    //    qDebug()<< "Img CT: " << img.colorCount();
-
     video->stabilizeImage(&image,&img);
 
-    if(!tImageP.isNull())
-        ui->lbImageProcessT->setPixmap(QPixmap::fromImage(subtract(tImageP, img).scaled(500, 500, Qt::KeepAspectRatio)));
+    if(activeCorrection)
+    {
+        if(!tImageP.isNull())
+            ui->lbImageProcessT->setPixmap(QPixmap::fromImage(subtract(tImageP, img).scaled(500, 500, Qt::KeepAspectRatio)));
 
-    tImageP =  img;
+        tImageP =  img;
+    }
 
     ui->lbImageProcess->setPixmap(QPixmap::fromImage(img.scaled(500, 500, Qt::KeepAspectRatio)));
 }
@@ -351,5 +313,16 @@ void FfmpegPlayer::changeStatusTimer()
     {
         reloj->start();
         ui->btTimer->setText("Stop");
+    }
+}
+
+void FfmpegPlayer::enableCorrection(bool status)
+{
+    activeCorrection = status;
+
+    if(!status)
+    {
+        ui->lbImageOriginT->setText("-");
+        ui->lbImageProcessT->setText("-");
     }
 }

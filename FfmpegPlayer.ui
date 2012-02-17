@@ -84,6 +84,13 @@
         </widget>
        </item>
        <item>
+        <widget class="QCheckBox" name="cxCorrection">
+         <property name="text">
+          <string>Enabled image correction</string>
+         </property>
+        </widget>
+       </item>
+       <item>
         <spacer name="horizontalSpacer_6">
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
