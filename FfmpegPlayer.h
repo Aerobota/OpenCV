@@ -53,6 +53,8 @@ private:
     QImage tImageO;
     QTimer* reloj;
 
+    bool useOpenCV;
+
 
 
 private slots:
@@ -64,6 +66,7 @@ private slots:
     void on_actionQuit_triggered();
 
     void changeStatusTimer();
+    void on_cbOpenCV_clicked();
 };
 
 #endif // FFMPEGPLAYER_H

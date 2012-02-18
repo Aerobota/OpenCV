@@ -13,6 +13,14 @@
 #include <QBitArray>
 #include <limits>
 
+#define USE_OPENCV 1
+
+#if USE_OPENCV
+
+#include <core/core.hpp>
+#include <highgui/highgui.hpp>
+
+#endif
 
 #define SEARCH_FACTOR_P         6
 #define HORIZ_WINDOW_M          25
@@ -26,8 +34,8 @@
 /**
 source: http://developer.gnome.org/glib/2.31/glib-Standard-Macros.html#MAX:CAPS
 */
-#define MAX(a, b)  (((a) > (b)) ? (a) : (b))
-#define MIN(a, b)  (((a) < (b)) ? (a) : (b))
+#define LMAX(a, b)  (((a) > (b)) ? (a) : (b))
+#define LMIN(a, b)  (((a) < (b)) ? (a) : (b))
 
 
 #define DO_FULL_CORRELATION     1
@@ -48,18 +56,37 @@ public:
 signals:
     
 public slots:
+#if USE_OPENCV
+    void stabilizeImage(const cv::Mat_<uchar> &imageSrc, cv::Mat_<uchar> &imageDest);
+#else
     void stabilizeImage(QImage* imageSrc, QImage* imageDest);
+#endif
+
 
     void getAverageProcessTime (uint* timeInMs);
 
 private:
-    unsigned long long timerTicks;
-    uint averageTime;
-    const long ticksPerSecond;
 
+#if USE_OPENCV
+    typedef cv::Mat_<bool>  tGrayCodeMat;
+
+    typedef cv::Mat_<uchar> tImageMat;
+
+    /** used to compute the duration average*/
+    double duration;
+    /** used to hold the averaging value for duration computation*/
+    uint aveCount;
+    /** used to hold the avera time */
+    double averageTime;
+#else
     typedef QVector<QBitArray>  tGrayCodeMat;
 
     typedef QVector<uchar*> tImageMat;
+
+    unsigned long long timerTicks;
+    uint averageTime;
+    const long ticksPerSecond;
+#endif
 
     typedef struct _tcorrMatElement{
         int     m;
@@ -136,10 +163,8 @@ private:
     void computeCorrelationLocations(uint subframe, uint seedX, uint seedY, uint index, uint hFactor, uint vFactor);
 
     /**
-      This function computes the graycode of an image
-    @param  imageSrc        The full image for which the gray code will be computed
-    @return imageGrayCode   The gray coded image in the four subframes of size (M+2*p) x (N+2*p)
-    */
+      This function computes the graycode of the current working image
+   */
     void getGrayCode();
 
     /**
@@ -156,7 +181,12 @@ private:
     @param  imageSrc        The image to be converted.
     @note   This function populates the imageMatrix data member.
     */
+#if USE_OPENCV
+    inline void convertImageToMatrix(const cv::Mat_<uchar> &imageSrc);
+#else
     void convertImageToMatrix(QImage* imageSrc);
+#endif
+
 
     /**
         This function computes the Gray Code for a single byte
@@ -172,7 +202,11 @@ private:
 
     @param  imageDest   The QImage where the final result will be painted on.
     */
+#if USE_OPENCV
+    void populateImageResult(const cv::Mat_<uchar> &imageSrc, cv::Mat_<uchar> &imageDest);
+#else
     void populateImageResult(QImage* imageDest);
+#endif
 
 
     /**

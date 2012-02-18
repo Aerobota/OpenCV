@@ -4,7 +4,8 @@
 FfmpegPlayer::FfmpegPlayer(QWidget *parent) :
         QWidget(parent),
         ui(new Ui::FfmpegPlayer),
-        video(NULL)
+        video(NULL),
+        useOpenCV(false)
 {
     ui->setupUi(this);
 
@@ -78,19 +79,21 @@ void FfmpegPlayer::on_actionLoad_video_triggered()
   Prompts the user for the video to load, and display the first frame
 **/
 void FfmpegPlayer::loadVideo(QString fileName)
-{
-    decoder.openFile(fileName);
-    if(decoder.isOk()==false)
-    {
-        QMessageBox::critical(this,"Error","Error loading the video");
-        return;
+{   if (useOpenCV){
+
+    } else {
+        decoder.openFile(fileName);
+        if(decoder.isOk()==false)
+        {
+            QMessageBox::critical(this,"Error","Error loading the video");
+            return;
+        }
+
+        // Get a new frame
+        nextFrame();
+        // Display a frame
+        displayFrame();
     }
-
-    // Get a new frame
-    nextFrame();
-    // Display a frame
-    displayFrame();
-
 }
 
 void FfmpegPlayer::errLoadVideo()
@@ -352,4 +355,10 @@ void FfmpegPlayer::changeStatusTimer()
         reloj->start();
         ui->btTimer->setText("Stop");
     }
+}
+
+void FfmpegPlayer::on_cbOpenCV_clicked()
+{
+    useOpenCV = ui->cbOpenCV->isChecked();
+
 }

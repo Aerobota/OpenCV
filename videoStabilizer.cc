@@ -4,6 +4,9 @@
 #include <QTimer>
 #include <sys/times.h>
 #include <unistd.h>
+#include <imgproc/imgproc.hpp>
+#include <core/types_c.h>
+
 
 videoStabilizer::videoStabilizer(QRect videoSize, QObject *parent):
     QObject(parent),
@@ -11,8 +14,15 @@ videoStabilizer::videoStabilizer(QRect videoSize, QObject *parent):
     searchFactorWindow(SEARCH_FACTOR_P/2),
     vSearchOffset(videoSize.height()/2),
     hSearchOffset(videoSize.width()/2),
+    #if USE_OPENCV
+    duration(0.0),
+    averageTime(0.0),
+    aveCount(0)
+  #else
     timerTicks(0),
     ticksPerSecond(sysconf(_SC_CLK_TCK))
+
+  #endif
 {
     //TODO: Validate height and width > 0 and less than a sensible number
     videoHeight = videoSize.height();
@@ -41,19 +51,26 @@ videoStabilizer::videoStabilizer(QRect videoSize, QObject *parent):
                                      subframeLocations[subframe].lx - searchFactorWindow,
                                      subframeLocations[subframe].ly - searchFactorWindow,
                                      0,
-                                    searchFactorWindow,
-                                    searchFactorWindow);
+                                     searchFactorWindow,
+                                     searchFactorWindow);
     }
 
- #endif
+#endif
 
 
 }
 
 videoStabilizer::~videoStabilizer(){
+#if USE_OPENCV
+    imageMatrix.release();
+    grayCodeMatrix[0].release();
+    grayCodeMatrix[1].release();
+
+#else
     for (int ii = 0; ii < videoHeight; ii++){
         delete imageMatrix[ii];
     }
+#endif
 }
 
 void videoStabilizer::allocateAndInitialize(){
@@ -62,6 +79,14 @@ void videoStabilizer::allocateAndInitialize(){
         memset(correlationMatrix[subframe],0, sizeof(tcorrMatElement)*18);
     }
 
+#if USE_OPENCV
+    /// allocate the memory of all the Matrices
+    grayCodeMatrix[0] = cv::Mat(videoHeight, videoWidth, CV_8U);
+    grayCodeMatrix[1] = cv::Mat(videoHeight, videoWidth, CV_8U);
+
+    imageMatrix = cv::Mat(videoHeight, videoWidth, CV_8U);
+
+#else
     /// allocate the memory of all the Matrices
     grayCodeMatrix[0].resize(videoHeight);
     grayCodeMatrix[1].resize(videoHeight);
@@ -74,8 +99,9 @@ void videoStabilizer::allocateAndInitialize(){
         imageMatrix[ii] = new uchar[videoWidth];
     }
 
-    qDebug() << grayCodeMatrix[0][479][639];
+#endif
 
+    // Clear the motion vectors
     memset(&vg_tm1, 0, sizeof(tcorrMatElement));
     memset(&va_tm1, 0, sizeof(tcorrMatElement));
     memset(&va, 0, sizeof(tcorrMatElement));
@@ -118,12 +144,18 @@ void videoStabilizer::computeCorrelationLocations(uint subframe,
             correlationMatrix[subframe][index].y = seedY  + (yy*vFactor);
 
             correlationMatrix[subframe][index].m   = correlationMatrix[subframe][index].x - subframeLocations[subframe].lx;
-            correlationMatrix[subframe][index++].n = correlationMatrix[subframe][index].y - subframeLocations[subframe].ly;
+            correlationMatrix[subframe][index].n = correlationMatrix[subframe][index].y - subframeLocations[subframe].ly;
+            index++;
         }
     }
 }
 
+#if USE_OPENCV
+void videoStabilizer::stabilizeImage(const cv::Mat_<uchar> &imageSrc, cv::Mat_<uchar> &imageDest){
+#else
 void videoStabilizer::stabilizeImage(QImage* imageSrc, QImage* imageDest){
+
+
     static long ticks;
     static uchar aveCount = 0;
     static struct tms timeVal;
@@ -132,43 +164,62 @@ void videoStabilizer::stabilizeImage(QImage* imageSrc, QImage* imageDest){
 
     st_time = times(&timeVal);
     ticks = timeVal.tms_stime;
+#endif
+
+    double tempDuration = static_cast<double>(cv::getTickCount());
 
     convertImageToMatrix(imageSrc);
     getGrayCode();
     computeCorrelation();
     findMotionVector();
-    populateImageResult(imageDest);
 
-    for (uint subframe = 0; subframe < 4; subframe ++){
-        for (uint index = 0; index < 18; index++)
-            correlationMatrix[subframe][index].value = 0;
+#if USE_OPENCV
+    populateImageResult(imageSrc, imageDest);
+
+    duration += (static_cast<double>(cv::getTickCount()) - tempDuration);
+    aveCount++;
+
+    if (aveCount == 10){
+        averageTime = (duration/aveCount)/cv::getTickFrequency();
+        aveCount = 0;
     }
 
-    currentGrayCodeIndex^=1;
+
+#else
+    populateImageResult(imageDest);
 
     if (aveCount == 10){
         averageTime = (uint)(timerTicks)/(10);
         aveCount = 0;
         timerTicks = 0;
-        qDebug() << averageTime;
     }
 
     aveCount++;
     en_time = times(&timeVal);
     timerTicks += (en_time - st_time);
+#endif
+
+    currentGrayCodeIndex^=1;
 }
 
 void videoStabilizer::getAverageProcessTime(uint *timeInMs){
+
     *timeInMs = averageTime;
 }
 
-
+#if USE_OPENCV
+inline void videoStabilizer::convertImageToMatrix(const cv::Mat_<uchar> &imageSrc){
+    imageMatrix = imageSrc;
+}
+#else
 void videoStabilizer::convertImageToMatrix(QImage* imageSrc){
     for (int ii=0; ii < videoHeight; ii++){
         imageMatrix[ii] = imageSrc->scanLine(ii);
     }
 
 }
+
+#endif
 
 void videoStabilizer::getGrayCode(){
 
@@ -179,13 +230,22 @@ void videoStabilizer::getGrayCode(){
 
 
 void videoStabilizer::getSubframeGrayCode (uchar subframe, BIT_PLANES bitPlane){
-    for (uint ii = subframeLocations[subframe].lx - SEARCH_FACTOR_P;
-              ii < subframeLocations[subframe].rx + SEARCH_FACTOR_P;
-              ii++){
-        for (uint jj = subframeLocations[subframe].ly - SEARCH_FACTOR_P;
-                  jj < subframeLocations[subframe].ry + SEARCH_FACTOR_P;
-                  jj++){
-           grayCodeMatrix[currentGrayCodeIndex][jj].setBit(ii, getByteGrayCode(imageMatrix[jj][ii], bitPlane));
+    for (uint jj = subframeLocations[subframe].ly - SEARCH_FACTOR_P;
+         jj < subframeLocations[subframe].ry + SEARCH_FACTOR_P;
+         jj++){
+
+#if USE_OPENCV
+        uchar* gcData= grayCodeMatrix[currentGrayCodeIndex].ptr<uchar>(jj);
+        uchar* imData= imageMatrix.ptr<uchar>(jj);
+#endif
+        for (uint ii = subframeLocations[subframe].lx - SEARCH_FACTOR_P;
+             ii < subframeLocations[subframe].rx + SEARCH_FACTOR_P;
+             ii++){
+#if USE_OPENCV
+            *(gcData + ii) =  getByteGrayCode( *(imData + ii), bitPlane);
+#else
+            grayCodeMatrix[currentGrayCodeIndex][jj].setBit(ii, getByteGrayCode(imageMatrix[jj][ii], bitPlane));
+#endif
         }
     }
 }
@@ -195,28 +255,36 @@ inline bool videoStabilizer::getByteGrayCode (uchar value, BIT_PLANES bitPlane){
 
     switch (bitPlane){
     case GC_BP_3:
-            return (bool) (((value & GC_BP_3)>>3) ^ ((value & GC_BP_4)>>4));
+        return (bool) (((value & GC_BP_3)>>3) ^ ((value & GC_BP_4)>>4));
         break;
     case GC_BP_4:
-            return (bool) (((value & GC_BP_4)>>4) ^ ((value & GC_BP_5)>>5));
+        return (bool) (((value & GC_BP_4)>>4) ^ ((value & GC_BP_5)>>5));
         break;
     case GC_BP_5:
-            return (bool) (((value & GC_BP_5)>>5) ^ ((value & GC_BP_6)>>6));
+        return (bool) (((value & GC_BP_5)>>5) ^ ((value & GC_BP_6)>>6));
         break;
     case GC_BP_6:
     default:
-            return (bool) (((value & GC_BP_6)>>6) ^ ((value & GC_BP_7)>>7));
+        return (bool) (((value & GC_BP_6)>>6) ^ ((value & GC_BP_7)>>7));
         break;
     }
 
 
 }
 
+#if USE_OPENCV
+void videoStabilizer::populateImageResult(const cv::Mat_<uchar> &imageSrc, cv::Mat_<uchar> &imageDest){
+    imageDest =  cv::Mat::zeros(imageDest.rows, imageDest.cols, CV_8U);
+
+    for (uint ii = LMAX(0, va.n); ii < LMIN(videoHeight, videoHeight+va.n); ii ++){
+        for (uint jj = LMAX(0, va.m); jj < LMIN (videoWidth, videoWidth+va.m); jj++){
+            imageDest(ii,jj) = imageSrc(ii- va.n, jj - va.m);
+        }// for jj
+    } // for ii
+
+}
+#else
 void videoStabilizer::populateImageResult(QImage* imageDest){
-/**
-y(max([1 1+r_mov]):min([r r+r_mov]),max([1 1+c_mov]):min([c c+c_mov])) = ...
-u(max([1 1-r_mov]):min([r r-r_mov]),max([1 1-c_mov]):min([c c-c_mov]));
-*/
     imageDest->fill(Qt::black);
 
     for (uint ii = MAX(0, va.n); ii < MIN(videoHeight, videoHeight+va.n); ii ++){
@@ -224,8 +292,8 @@ u(max([1 1-r_mov]):min([r r-r_mov]),max([1 1-c_mov]):min([c c-c_mov]));
             imageDest->setPixel(jj,ii,imageMatrix[ii- va.n][jj - va.m]);
         }// for jj
     } // for ii
-
 }
+#endif
 
 void videoStabilizer::computeCorrelation(){
 
@@ -261,6 +329,7 @@ void videoStabilizer::computeSubframeCorrelation (uint index, uchar subframe, uc
     localMinima[subframe].value = UINT_MAX;
 
     for (uint corrIndex = index; corrIndex < (index + 9); corrIndex++){
+        correlationMatrix[subframe][corrIndex].value = 0;
 
         computeSingleCorrelation(subframe, t_m1,&correlationMatrix[subframe][corrIndex]);
 
@@ -291,27 +360,23 @@ void videoStabilizer::computeFullCorrelation (uchar subframe, uchar tm_1){
 }
 
 inline void videoStabilizer::computeSingleCorrelation (uchar subframe, uchar t_m1, tcorrMatElement* element){
-//    p = 8;
-//    N = 76;
-//    S_t = u(:,1:size(u,2)/2);
-//    S_tm1 = u(:,(size(u,2)/2)+1:end);
-//    Cj = zeros(2*p+1,2*p+1);
-//    for m = 1:2*p+1
-//        for n = 1:2*p+1
-//            cj_mat = bitxor(S_t(p+1:p+N,p+1:p+N),...
-//                             S_tm1(m:m+N-1,n:n+N-1));
-//            Cj(m,n) = sum(cj_mat(:));
-//        end
-//    end
-//    y = Cj;
-    for (uint x = subframeLocations[subframe].lx;
-              x < subframeLocations[subframe].rx;
-              x++) {     // x is width
-        for (uint y = subframeLocations[subframe].ly;
-                  y < subframeLocations[subframe].ry;
-                  y++) {  // y is height
+    for (uint y = subframeLocations[subframe].ly;
+         y < subframeLocations[subframe].ry;
+         y++) {  // y is height
+
+        uchar* data     = grayCodeMatrix[currentGrayCodeIndex].ptr<uchar>(y);
+        uchar* data_tm1 = grayCodeMatrix[t_m1].ptr<uchar>( y + element->n);
+
+        for (uint x = subframeLocations[subframe].lx;
+             x < subframeLocations[subframe].rx;
+             x++) {     // x is width
+#if USE_OPENCV
+            element->value += *(data + x) ^ *(data_tm1 + x + element->m);
+#else
             element->value += grayCodeMatrix[currentGrayCodeIndex][y].testBit(x) ^
-                              grayCodeMatrix[t_m1][y+element->n].testBit(x+element->m);
+                    grayCodeMatrix[t_m1][y+element->n].testBit(x+element->m);
+
+#endif
         }
     }
 }
@@ -349,7 +414,7 @@ void videoStabilizer::findMotionVector (){
 }
 
 void videoStabilizer::sortLocalMinima (int* sortedMinima, char beg, char end){
-/**
+    /**
 
 Source:  http://alienryderflex.com/quicksort/
 
