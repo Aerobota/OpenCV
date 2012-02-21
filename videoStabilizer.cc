@@ -81,10 +81,10 @@ void videoStabilizer::allocateAndInitialize(){
 
 #if USE_OPENCV
     /// allocate the memory of all the Matrices
-    grayCodeMatrix[0] = cv::Mat(videoHeight, videoWidth, CV_8U);
-    grayCodeMatrix[1] = cv::Mat(videoHeight, videoWidth, CV_8U);
+    grayCodeMatrix[0] = cv::Mat::zeros(videoHeight, videoWidth, CV_8UC1);
+    grayCodeMatrix[1] = cv::Mat::zeros(videoHeight, videoWidth, CV_8UC1);
 
-    imageMatrix = cv::Mat(videoHeight, videoWidth, CV_8U);
+    //imageMatrix = cv::Mat(videoHeight, videoWidth, CV_8UC1);
 
 #else
     /// allocate the memory of all the Matrices
@@ -151,7 +151,10 @@ void videoStabilizer::computeCorrelationLocations(uint subframe,
 }
 
 #if USE_OPENCV
-void videoStabilizer::stabilizeImage(const cv::Mat_<uchar> &imageSrc, cv::Mat_<uchar> &imageDest){
+void videoStabilizer::stabilizeImage(const cv::Mat &imageSrc, cv::Mat &imageDest){
+
+    double tempDuration = static_cast<double>(cv::getTickCount());
+    static double tickFreq = static_cast<double>(cv::getTickFrequency());
 #else
 void videoStabilizer::stabilizeImage(QImage* imageSrc, QImage* imageDest){
 
@@ -166,25 +169,25 @@ void videoStabilizer::stabilizeImage(QImage* imageSrc, QImage* imageDest){
     ticks = timeVal.tms_stime;
 #endif
 
-    double tempDuration = static_cast<double>(cv::getTickCount());
-
     convertImageToMatrix(imageSrc);
     getGrayCode();
     computeCorrelation();
     findMotionVector();
 
 #if USE_OPENCV
-    populateImageResult(imageSrc, imageDest);
+    populateImageResult(imageDest);
 
     duration += (static_cast<double>(cv::getTickCount()) - tempDuration);
     aveCount++;
 
     if (aveCount == 10){
-        averageTime = (duration/aveCount)/cv::getTickFrequency();
+        averageTime = (duration/aveCount)/tickFreq;
         aveCount = 0;
+        duration = 0;
+        emit gotDuration(averageTime);
     }
 
-
+    imageMatrix.release();
 #else
     populateImageResult(imageDest);
 
@@ -200,6 +203,7 @@ void videoStabilizer::stabilizeImage(QImage* imageSrc, QImage* imageDest){
 #endif
 
     currentGrayCodeIndex^=1;
+
 }
 
 void videoStabilizer::getAverageProcessTime(uint *timeInMs){
@@ -208,7 +212,7 @@ void videoStabilizer::getAverageProcessTime(uint *timeInMs){
 }
 
 #if USE_OPENCV
-inline void videoStabilizer::convertImageToMatrix(const cv::Mat_<uchar> &imageSrc){
+inline void videoStabilizer::convertImageToMatrix(const cv::Mat &imageSrc){
     imageMatrix = imageSrc;
 }
 #else
@@ -242,6 +246,7 @@ void videoStabilizer::getSubframeGrayCode (uchar subframe, BIT_PLANES bitPlane){
              ii < subframeLocations[subframe].rx + SEARCH_FACTOR_P;
              ii++){
 #if USE_OPENCV
+//            *(gcData + ii) =  getByteGrayCode( *(imData + ii), bitPlane) == 0? 0: 255;
             *(gcData + ii) =  getByteGrayCode( *(imData + ii), bitPlane);
 #else
             grayCodeMatrix[currentGrayCodeIndex][jj].setBit(ii, getByteGrayCode(imageMatrix[jj][ii], bitPlane));
@@ -273,12 +278,17 @@ inline bool videoStabilizer::getByteGrayCode (uchar value, BIT_PLANES bitPlane){
 }
 
 #if USE_OPENCV
-void videoStabilizer::populateImageResult(const cv::Mat_<uchar> &imageSrc, cv::Mat_<uchar> &imageDest){
-    imageDest =  cv::Mat::zeros(imageDest.rows, imageDest.cols, CV_8U);
+void videoStabilizer::populateImageResult(cv::Mat &imageDest){
+
+    //imageDest = grayCodeMatrix[currentGrayCodeIndex];
 
     for (uint ii = LMAX(0, va.n); ii < LMIN(videoHeight, videoHeight+va.n); ii ++){
+
+        uchar* deData= imageDest.ptr<uchar>(ii);
+        uchar* srData= imageMatrix.ptr<uchar>(ii - va.n);
+
         for (uint jj = LMAX(0, va.m); jj < LMIN (videoWidth, videoWidth+va.m); jj++){
-            imageDest(ii,jj) = imageSrc(ii- va.n, jj - va.m);
+            *(deData + jj) = *(srData + jj - va.m);
         }// for jj
     } // for ii
 
@@ -363,9 +373,10 @@ inline void videoStabilizer::computeSingleCorrelation (uchar subframe, uchar t_m
     for (uint y = subframeLocations[subframe].ly;
          y < subframeLocations[subframe].ry;
          y++) {  // y is height
-
+#if USE_OPENCV
         uchar* data     = grayCodeMatrix[currentGrayCodeIndex].ptr<uchar>(y);
         uchar* data_tm1 = grayCodeMatrix[t_m1].ptr<uchar>( y + element->n);
+#endif
 
         for (uint x = subframeLocations[subframe].lx;
              x < subframeLocations[subframe].rx;

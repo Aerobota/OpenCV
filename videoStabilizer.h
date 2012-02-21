@@ -54,23 +54,22 @@ public:
 
 
 signals:
-    
+    void gotDuration (double &durationInMs);
+
 public slots:
 #if USE_OPENCV
-    void stabilizeImage(const cv::Mat_<uchar> &imageSrc, cv::Mat_<uchar> &imageDest);
+    void stabilizeImage(const cv::Mat &imageSrc, cv::Mat &imageDest);
 #else
     void stabilizeImage(QImage* imageSrc, QImage* imageDest);
 #endif
-
-
     void getAverageProcessTime (uint* timeInMs);
 
 private:
 
 #if USE_OPENCV
-    typedef cv::Mat_<bool>  tGrayCodeMat;
+    typedef cv::Mat  tGrayCodeMat;
 
-    typedef cv::Mat_<uchar> tImageMat;
+    typedef cv::Mat tImageMat;
 
     /** used to compute the duration average*/
     double duration;
@@ -182,7 +181,7 @@ private:
     @note   This function populates the imageMatrix data member.
     */
 #if USE_OPENCV
-    inline void convertImageToMatrix(const cv::Mat_<uchar> &imageSrc);
+    inline void convertImageToMatrix(const cv::Mat &imageSrc);
 #else
     void convertImageToMatrix(QImage* imageSrc);
 #endif
@@ -200,10 +199,14 @@ private:
     /**
         This function creates the de-rotated image to paint.
 
+        @note   The source image is assumed to be blank. This function only touches
+                the pixels related to de-rotating the image. Therefore you must provide
+                a "blank" image.
+
     @param  imageDest   The QImage where the final result will be painted on.
     */
 #if USE_OPENCV
-    void populateImageResult(const cv::Mat_<uchar> &imageSrc, cv::Mat_<uchar> &imageDest);
+    void populateImageResult(cv::Mat &imageDest);
 #else
     void populateImageResult(QImage* imageDest);
 #endif
