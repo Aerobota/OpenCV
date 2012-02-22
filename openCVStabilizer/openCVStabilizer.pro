@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui
+QT       += core gui opengl
 
 TARGET = openCVStabilizer
 TEMPLATE = app
@@ -33,11 +33,13 @@ LIBS += "/opt/local/lib/libopencv_video.dylib"
 SOURCES += main.cc\
         MainWindow.cc \
     ../videoStabilizer.cc \
-    OpenCVWidget.cpp
+    OpenCVWidget.cpp \
+    HUD.cpp
 
 HEADERS  += MainWindow.h \
     ../videoStabilizer.h  \
-    OpenCVWidget.h
+    OpenCVWidget.h  \
+    HUD.h
 
 FORMS    += MainWindow.ui  \
     OpenCVWidget.ui
