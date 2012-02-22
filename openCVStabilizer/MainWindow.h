@@ -4,8 +4,10 @@
 #include <QMainWindow>
 #include <core/core.hpp>
 #include <highgui/highgui.hpp>
+
 #include "../videoStabilizer.h"
 #include <QTimer>
+#include <QDebug>
 
 namespace Ui {
 class MainWindow;
@@ -31,6 +33,9 @@ private slots:
 
     void updateTimeLabel(double &timeInMs);
 
+    void playRTSP();
+    void timerRTSP();
+
 private:
     Ui::MainWindow *ui;
 
@@ -43,7 +48,9 @@ private:
     /** This timer gets called based on the video framerate and sets up the
         the frame processing*/
     QTimer* frameTimer;
-
+    QTimer* mytimer;
+    cv::VideoCapture captureRTSP;
+    cv::VideoWriter writerMovie;
 
 };
 
