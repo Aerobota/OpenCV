@@ -141,6 +141,13 @@
         </spacer>
        </item>
        <item>
+        <widget class="QCheckBox" name="cbOpenCV">
+         <property name="text">
+          <string>Use OpenCV</string>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QPushButton" name="btOpenVideo">
          <property name="text">
           <string>Open video</string>

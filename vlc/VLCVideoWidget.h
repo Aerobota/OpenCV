@@ -27,6 +27,7 @@
 
 #include"videoStabilizer.h"
 
+
 typedef unsigned char uchar;
 struct ctx
 {
@@ -77,7 +78,12 @@ private:
     QTimer* myTimer;
     int countImage;
     QString pathDirectory;
+#if USE_OPENCV
+    cv::Mat_<uchar> tImage;
+#else
     QImage tImage;
+#endif
+
     struct ctx ctx;
 
 protected:
@@ -139,7 +145,12 @@ public slots:
      *
      * @param image The captured image
      **/
+#if USE_OPENCV
+    void processImage(cv::Mat_<uchar> image);
+#else
     void processImage(QImage image);
+#endif
+
     /**
      * @brief This method allows assign new path to video open/store.
      *

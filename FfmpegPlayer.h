@@ -59,6 +59,8 @@ private:
     QTimer* reloj;
     bool activeCorrection;
 
+    bool useOpenCV;
+
 
 
 private slots:
@@ -79,6 +81,7 @@ private slots:
 
     void changeStatusTimer();
     void enableCorrection(bool status);
+    void on_cbOpenCV_clicked();
 };
 
 #endif // FFMPEGPLAYER_H

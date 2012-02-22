@@ -8,6 +8,8 @@
 
 #include "VLCVideoWidget.h"
 #include "ui_VLCVideoWidget.h"
+#include "imgproc/imgproc.hpp"
+#include "core/types_c.h"
 
 #define qtu( i ) ((i).toUtf8().constData())
 
@@ -336,20 +338,67 @@ void VLCVideoWidget::captureSnapshot()
 
         foreach (const QString &str, files)
         {
+#if USE_OPENCV
+            cv::Mat_<uchar> myImage = cv::imread((pathVideo+str).toAscii().data(),0);;
+            QFile::remove(pathVideo+str);//remove snapshot
+            processImage(myImage);//process the image
+
+#else
             QImage myImage;
             myImage.load(pathVideo+str);//load snapshot
             myImage = myImage.convertToFormat(QImage::Format_Indexed8);
             QFile::remove(pathVideo+str);//remove snapshot
-
             processImage(myImage);//process the image
+#endif
         }
     }
 }
 
-void VLCVideoWidget::processImage(QImage image)
-{
+#if USE_OPENCV
+void VLCVideoWidget::processImage(cv::Mat_<uchar> image){
+
+    QRect sizeImage;
+    sizeImage.setWidth(image.cols);
+    sizeImage.setHeight(image.rows);
+
+    static cv::Mat tempImage;
+    static QImage qimg;
+    static cv::Mat img(cv::Size(image.rows,image.cols),CV_8UC);
+
+
+    if (video == NULL )
+    {
+        video = new videoStabilizer(sizeImage);
+    }
+    video->stabilizeImage(image,img);
+
+    if(tImage.data){
+        tempImage = tImage - img;
+        cv::cvtColor(tempImage,tempImage, CV_BGR2RGB);
+        qimg = QImage((const unsigned char*)(tempImage.data),
+                      tempImage.cols,
+                      tempImage.rows,
+                      QImage::Format_RGB888);
+
+        ui->lbImageMatrixRGBSub->setPixmap(QPixmap::fromImage(qimg.scaled(500, 500, Qt::KeepAspectRatio)));
+    }
+
+    img.copyTo(tImage);
+
+    tempImage = img;
+    cv::cvtColor(tempImage,tempImage, CV_BGR2RGB);
+    qimg = QImage((const unsigned char*)(tempImage.data),
+                  tempImage.cols,
+                  tempImage.rows,
+                  QImage::Format_RGB888);
+    ui->lbImageMatrixRGB->setPixmap(QPixmap::fromImage(qimg.scaled(500, 500, Qt::KeepAspectRatio)));
+
+
+#else
+void VLCVideoWidget::processImage(QImage image){
     QRect sizeImage = image.rect();
     static QImage img(sizeImage.width(), sizeImage.height(), QImage::Format_Indexed8);
+
 
     if (video == NULL )
     {
@@ -357,19 +406,15 @@ void VLCVideoWidget::processImage(QImage image)
         img.setColorTable(image.colorTable());
     }
 
-    //    qDebug()<<"Size Image: "<<sizeImage.height()<<" x "<<sizeImage.width();
-    //    qDebug()<< "Depth: " << img.depth();
-    //    qDebug()<< "Image CT: " << image.colorCount();
-    //    qDebug()<< "Img CT: " << img.colorCount();
-
     video->stabilizeImage(&image,&img);
-
     if(!tImage.isNull())
         ui->lbImageMatrixRGBSub->setPixmap(QPixmap::fromImage(subtract(tImage, img).scaled(500, 500, Qt::KeepAspectRatio)));
 
     tImage =  img;
 
     ui->lbImageMatrixRGB->setPixmap(QPixmap::fromImage(img.scaled(500, 500, Qt::KeepAspectRatio)));
+#endif
+
 }
 
 void VLCVideoWidget::openDirectory()
