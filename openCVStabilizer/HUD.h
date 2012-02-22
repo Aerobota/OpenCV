@@ -38,6 +38,11 @@ This file is part of the QGROUNDCONTROL project
 #include <QFontDatabase>
 #include <QTimer>
 
+
+#include "core/core.hpp"
+#include "highgui/highgui.hpp"
+#include "../videoStabilizer.h"
+#include "imgproc/imgproc.hpp"
 /**
  * @brief Displays a Head Up Display (HUD)
  *
@@ -54,6 +59,12 @@ public:
 
     void setImageSize(int width, int height, int depth, int channels);
     void resizeGL(int w, int h);
+
+    cv::VideoCapture captureRTSP;
+    cv::VideoWriter writerMovie;
+    QTimer* mytimer;
+    /** This is the video stabilizer algorithm class*/
+    videoStabilizer* video;
 
 public slots:
     void initializeGL();
@@ -110,6 +121,7 @@ protected slots:
 
     void drawPolygon(QPolygonF refPolygon, QPainter* painter);
 
+    void paintNewHud();
 protected:
     void commitRawDataToGL();
     /** @brief Convert reference coordinates to screen coordinates */

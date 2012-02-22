@@ -108,3 +108,19 @@ void OpenCVWidget::timerRTSP()
     ui->lbDisplay->setPixmap(QPixmap::fromImage(img).scaled(500, 500, Qt::KeepAspectRatio));
     //ui->lbDisplay->resize(ui->lbDisplay->pixmap()->size());
 }
+
+void OpenCVWidget::mousePressEvent(QMouseEvent *event)
+{
+    if(event->button() == Qt::LeftButton)
+    {
+        x=event->x();
+        y=event->y();
+
+        if(!ui->lbDisplay->pixmap()->isNull())
+        {
+            QPixmap pm2 = ui->lbDisplay->pixmap()->copy(x, y, x+20, y+20);
+        }
+    }
+
+    QWidget::mousePressEvent(event);
+}

@@ -5,6 +5,7 @@
 #include <QTimer>
 #include <QDebug>
 #include <QFileDialog>
+#include <QMouseEvent>
 
 #include "core/core.hpp"
 #include "highgui/highgui.hpp"
@@ -23,6 +24,8 @@ public:
     explicit OpenCVWidget(QWidget *parent = 0);
     ~OpenCVWidget();
 
+    void mousePressEvent(QMouseEvent *event);
+
 private:
     Ui::OpenCVWidget *ui;
     cv::VideoCapture captureRTSP;
@@ -30,6 +33,7 @@ private:
     QTimer* mytimer;
     /** This is the video stabilizer algorithm class*/
     videoStabilizer* video;
+    int x, y;
 
 public slots:
     void playRTSP();
