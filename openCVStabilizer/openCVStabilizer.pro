@@ -32,9 +32,12 @@ LIBS += "/opt/local/lib/libopencv_video.dylib"
 
 SOURCES += main.cc\
         MainWindow.cc \
-    ../videoStabilizer.cc
+    ../videoStabilizer.cc \
+    OpenCVWidget.cpp
 
 HEADERS  += MainWindow.h \
-    ../videoStabilizer.h
+    ../videoStabilizer.h  \
+    OpenCVWidget.h
 
-FORMS    += MainWindow.ui
+FORMS    += MainWindow.ui  \
+    OpenCVWidget.ui
