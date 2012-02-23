@@ -1,6 +1,8 @@
 #include "OpenCVWidget.h"
 #include "ui_OpenCVWidget.h"
 
+#include "OverlayData.h"
+
 OpenCVWidget::OpenCVWidget(QWidget *parent) :
         QWidget(parent),
         video(NULL),
@@ -8,14 +10,37 @@ OpenCVWidget::OpenCVWidget(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    connect(ui->btPlay, SIGNAL(clicked()), this, SLOT(playMovie()));
-    connect(ui->btStop, SIGNAL(clicked()), this, SLOT(stopMovie()));
-    connect(ui->btRTSP, SIGNAL(clicked()), this, SLOT(playRTSP()));
-    connect(ui->btFile, SIGNAL(clicked()), this, SLOT(playFile()));
+//    connect(ui->btPlay, SIGNAL(clicked()), this, SLOT(playMovie()));
+//    connect(ui->btStop, SIGNAL(clicked()), this, SLOT(stopMovie()));
+//    connect(ui->btRTSP, SIGNAL(clicked()), this, SLOT(playRTSP()));
+//    connect(ui->btFile, SIGNAL(clicked()), this, SLOT(playFile()));
 
     mytimer = new QTimer(this);
     mytimer->setInterval(34);
     connect(mytimer, SIGNAL(timeout()), this, SLOT(timerRTSP()));
+
+    OverlayData* h = new OverlayData(300, 300, this);
+//    h->setMinimumHeight(300);
+//    h->setMinimumWidth(300);
+
+
+
+    QHBoxLayout* v = new QHBoxLayout();
+    btPlay = new QPushButton("play");
+    v->addWidget(btPlay);
+    v->addWidget(new QPushButton("stop"));
+    v->addWidget(new QPushButton("File"));
+    v->addWidget(new QPushButton("RTSP"));
+
+    connect(btPlay, SIGNAL(clicked()), h, SLOT(playMovie()));
+
+    QVBoxLayout* l = new QVBoxLayout();
+
+    l->addWidget(h);
+    l->addLayout(v);
+
+    setLayout(l);
+
 
     setWindowTitle("Video");
 }
@@ -52,7 +77,7 @@ void OpenCVWidget::setURL(QString url)
         return;
     }
 
-    ui->lbTitle->setText(url);
+    //ui->lbTitle->setText(url);
 }
 
 void OpenCVWidget::playMovie()
@@ -105,7 +130,7 @@ void OpenCVWidget::timerRTSP()
                         output.rows,
                         QImage::Format_RGB888);
 
-    ui->lbDisplay->setPixmap(QPixmap::fromImage(img).scaled(500, 500, Qt::KeepAspectRatio));
+    //ui->lbDisplay->setPixmap(QPixmap::fromImage(img).scaled(500, 500, Qt::KeepAspectRatio));
     //ui->lbDisplay->resize(ui->lbDisplay->pixmap()->size());
 }
 
@@ -116,10 +141,10 @@ void OpenCVWidget::mousePressEvent(QMouseEvent *event)
         x=event->x();
         y=event->y();
 
-        if(!ui->lbDisplay->pixmap()->isNull())
-        {
-            QPixmap pm2 = ui->lbDisplay->pixmap()->copy(x, y, x+20, y+20);
-        }
+//        if(!ui->lbDisplay->pixmap()->isNull())
+//        {
+//            QPixmap pm2 = ui->lbDisplay->pixmap()->copy(x, y, x+20, y+20);
+//        }
     }
 
     QWidget::mousePressEvent(event);

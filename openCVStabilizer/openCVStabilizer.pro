@@ -34,12 +34,12 @@ SOURCES += main.cc\
         MainWindow.cc \
     ../videoStabilizer.cc \
     OpenCVWidget.cpp \
-    HUD.cpp
+    OverlayData.cpp
 
 HEADERS  += MainWindow.h \
     ../videoStabilizer.h  \
     OpenCVWidget.h  \
-    HUD.h
+    OverlayData.h
 
 FORMS    += MainWindow.ui  \
     OpenCVWidget.ui

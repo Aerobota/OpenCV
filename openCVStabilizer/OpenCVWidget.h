@@ -6,6 +6,9 @@
 #include <QDebug>
 #include <QFileDialog>
 #include <QMouseEvent>
+#include <QHBoxLayout>
+#include <QPushButton>
+
 
 #include "core/core.hpp"
 #include "highgui/highgui.hpp"
@@ -34,6 +37,8 @@ private:
     /** This is the video stabilizer algorithm class*/
     videoStabilizer* video;
     int x, y;
+
+    QPushButton* btPlay;
 
 public slots:
     void playRTSP();

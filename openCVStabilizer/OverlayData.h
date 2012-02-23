@@ -50,12 +50,12 @@ This file is part of the QGROUNDCONTROL project
  * It can superimpose the HUD over the current live image stream (any arriving image stream will be auto-
  * matically used as background), or it draws the classic blue-brown background known from instruments.
  */
-class HUD : public QGLWidget
+class OverlayData : public QGLWidget
 {
     Q_OBJECT
 public:
-    HUD(int width = 640, int height = 480, QWidget* parent = NULL);
-    ~HUD();
+    OverlayData(int width = 640, int height = 480, QWidget* parent = NULL);
+    ~OverlayData();
 
     void setImageSize(int width, int height, int depth, int channels);
     void resizeGL(int w, int h);
@@ -121,7 +121,8 @@ protected slots:
 
     void drawPolygon(QPolygonF refPolygon, QPainter* painter);
 
-    void paintNewHud();
+    void playMovie();
+
 protected:
     void commitRawDataToGL();
     /** @brief Convert reference coordinates to screen coordinates */

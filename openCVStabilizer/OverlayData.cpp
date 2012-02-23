@@ -40,7 +40,7 @@ This file is part of the QGROUNDCONTROL project
 #include <qmath.h>
 #include <limits>
 
-#include "HUD.h"
+#include "OverlayData.h"
 
 // Fix for some platforms, e.g. windows
 #ifndef GL_MULTISAMPLE
@@ -69,7 +69,7 @@ inline bool isinf(T value)
  * @param height
  * @param parent
  */
-HUD::HUD(int width, int height, QWidget* parent)
+OverlayData::OverlayData(int width, int height, QWidget* parent)
     : QGLWidget(QGLFormat(QGL::SampleBuffers), parent),
     //uas(NULL),
     yawInt(0.0f),
@@ -132,17 +132,13 @@ HUD::HUD(int width, int height, QWidget* parent)
     hudInstrumentsEnabled(false),
     videoEnabled(true),
     xImageFactor(1.0),
-    yImageFactor(1.0)
-{
-    // Set auto fill to false
+    yImageFactor(1.0),
+    video(NULL)
+{    
     setAutoFillBackground(false);
-
-    //    // Set minimum size
     setMinimumSize(80, 60);
-    //    // Set preferred size
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
-    //    // Fill with black background
     QImage fill = QImage(width, height, QImage::Format_Indexed8);
     fill.setNumColors(3);
     fill.setColor(0, qRgb(0, 0, 0));
@@ -150,55 +146,40 @@ HUD::HUD(int width, int height, QWidget* parent)
     fill.setColor(2, qRgb(0, 0, 0));
     fill.fill(0);
 
-
     captureRTSP.open("/Volumes/HDD_120/vuelos/09022012/20120209093344.mp4");
 
     refreshTimer->setInterval(updateInterval);
 
     connect(refreshTimer, SIGNAL(timeout()), this, SLOT(paintHUD()));
-    //connect(refreshTimer, SIGNAL(timeout()), this, SLOT(paintNewHud()));
-
-    //    fontDatabase = QFontDatabase();
-    //    const QString fontFileName = ":/general/vera.ttf"; ///< Font file is part of the QRC file and compiled into the app
-    //    const QString fontFamilyName = "Bitstream Vera Sans";
-    //    if(!QFile::exists(fontFileName)) qDebug() << "ERROR! font file: " << fontFileName << " DOES NOT EXIST!";
-
-    //    fontDatabase.addApplicationFont(fontFileName);
-    //    font = fontDatabase.font(fontFamilyName, "Roman", qMax(5,(int)(10.0f*scalingFactor*1.2f+0.5f)));
-    //    QFont* fontPtr = &font;
-    //    if (!fontPtr)
-    //    {
-    //        qDebug() << "ERROR! FONT NOT LOADED!";
-    //    }
-    //    else
-    //    {
-    //        if (font.family() != fontFamilyName) qDebug() << "ERROR! WRONG FONT LOADED: " << fontFamilyName;
-    //    }
 
     createActions();
-
-    setVisible(false);
+    setVisible(true);
 }
 
-HUD::~HUD()
+OverlayData::~OverlayData()
 {
     refreshTimer->stop();
 }
 
-QSize HUD::sizeHint() const
+QSize OverlayData::sizeHint() const
 {
     return QSize(width(), (width()*3.0f)/4);
 }
 
-void HUD::showEvent(QShowEvent* event)
+void OverlayData::showEvent(QShowEvent* event)
 {
     // React only to internal (pre-display)
     // events
     Q_UNUSED(event)
+    //refreshTimer->start(updateInterval);
+}
+
+void OverlayData::playMovie()
+{
     refreshTimer->start(updateInterval);
 }
 
-void HUD::hideEvent(QHideEvent* event)
+void OverlayData::hideEvent(QHideEvent* event)
 {
     // React only to internal (pre-display)
     // events
@@ -206,7 +187,7 @@ void HUD::hideEvent(QHideEvent* event)
     refreshTimer->stop();
 }
 
-void HUD::contextMenuEvent (QContextMenuEvent* event)
+void OverlayData::contextMenuEvent (QContextMenuEvent* event)
 {
     QMenu menu(this);
     // Update actions
@@ -221,7 +202,7 @@ void HUD::contextMenuEvent (QContextMenuEvent* event)
     menu.exec(event->globalPos());
 }
 
-void HUD::createActions()
+void OverlayData::createActions()
 {
     enableHUDAction = new QAction(tr("Enable HUD"), this);
     enableHUDAction->setStatusTip(tr("Show the HUD instruments in this window"));
@@ -244,7 +225,7 @@ void HUD::createActions()
  * @param y coordinate in pixels to be converted to reference mm units
  * @return the screen coordinate relative to the QGLWindow origin
  */
-float HUD::refToScreenX(float x)
+float OverlayData::refToScreenX(float x)
 {
     //qDebug() << "sX: " << (scalingFactor * x);
     return (scalingFactor * x);
@@ -253,7 +234,7 @@ float HUD::refToScreenX(float x)
  * @param x coordinate in pixels to be converted to reference mm units
  * @return the screen coordinate relative to the QGLWindow origin
  */
-float HUD::refToScreenY(float y)
+float OverlayData::refToScreenY(float y)
 {
     //qDebug() << "sY: " << (scalingFactor * y);
     return (scalingFactor * y);
@@ -264,7 +245,7 @@ float HUD::refToScreenY(float y)
  * the x and y center offsets.
  *
  */
-void HUD::paintCenterBackground(float roll, float pitch, float yaw)
+void OverlayData::paintCenterBackground(float roll, float pitch, float yaw)
 {
     // Center indicator is 100 mm wide
     float referenceWidth = 70.0;
@@ -333,7 +314,7 @@ void HUD::paintCenterBackground(float roll, float pitch, float yaw)
  * @param refX position in reference units (mm of the real instrument). This is relative to the measurement unit position, NOT in pixels.
  * @param refY position in reference units (mm of the real instrument). This is relative to the measurement unit position, NOT in pixels.
  */
-void HUD::paintText(QString text, QColor color, float fontSize, float refX, float refY, QPainter* painter)
+void OverlayData::paintText(QString text, QColor color, float fontSize, float refX, float refY, QPainter* painter)
 {
     QPen prevPen = painter->pen();
     float pPositionX = refToScreenX(refX) - (fontSize*scalingFactor*0.072f);
@@ -357,7 +338,7 @@ void HUD::paintText(QString text, QColor color, float fontSize, float refX, floa
     painter->setPen(prevPen);
 }
 
-void HUD::initializeGL()
+void OverlayData::initializeGL()
 {
     bool antialiasing = true;
 
@@ -389,7 +370,7 @@ void HUD::initializeGL()
  * @param referenceWidth width in the reference mm-unit space
  * @param referenceHeight width in the reference mm-unit space
  */
-void HUD::setupGLView(float referencePositionX, float referencePositionY, float referenceWidth, float referenceHeight)
+void OverlayData::setupGLView(float referencePositionX, float referencePositionY, float referenceWidth, float referenceHeight)
 {
     int pixelWidth  = (int)(referenceWidth * scalingFactor);
     int pixelHeight = (int)(referenceHeight * scalingFactor);
@@ -415,12 +396,12 @@ void HUD::setupGLView(float referencePositionX, float referencePositionY, float 
     //glScalef(scaleX, scaleY, 1.0f);
 }
 
-void HUD::paintRollPitchStrips()
+void OverlayData::paintRollPitchStrips()
 {
 }
 
 
-void HUD::paintEvent(QPaintEvent *event)
+void OverlayData::paintEvent(QPaintEvent *event)
 {
     // Event is not needed
     // the event is ignored as this widget
@@ -428,75 +409,10 @@ void HUD::paintEvent(QPaintEvent *event)
     Q_UNUSED(event);
 }
 
-void HUD::paintNewHud()
-{
-
-
-
-    //    makeCurrent();
-    //    glMatrixMode(GL_MODELVIEW);
-    //    glPushMatrix();
-    //    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    cv::Mat frame;
-
-    if(!captureRTSP.read(frame))
-    {
-        qDebug()  << "No frame" ;
-        cv::waitKey();
-    }
-
-    if (video == NULL )
-    {
-        QRect imageSize;
-        imageSize.setWidth(captureRTSP.get(CV_CAP_PROP_FRAME_WIDTH));
-        imageSize.setHeight(captureRTSP.get(CV_CAP_PROP_FRAME_HEIGHT));
-
-        qDebug()<<"width: "<< captureRTSP.get(CV_CAP_PROP_FRAME_WIDTH);
-        qDebug()<<"height: "<< captureRTSP.get(CV_CAP_PROP_FRAME_HEIGHT);
-
-        video = new videoStabilizer(imageSize);
-        //connect(video,SIGNAL(gotDuration(double&)), this, SLOT(updateTimeLabel(double&)));
-        //glPixelZoom(1.0f, 1.0f);
-    }
-
-    //glDrawPixels(frame.cols, frame.rows, GL_RGB, GL_UNSIGNED_BYTE, frame.data);// glImage.bits());
-
-    cv::cvtColor(frame,frame, CV_BGR2GRAY);
-    cv::Mat output = cv::Mat::zeros(frame.rows, frame.cols, CV_8UC1);
-    video->stabilizeImage(frame,output);
-    cv::cvtColor(output,output, CV_GRAY2RGB);
-    glImage = QImage((const unsigned char*)(output.data), output.cols, output.rows, QImage::Format_RGB888);
-
-    //glDrawPixels(output.cols, output.rows, GL_RGB, GL_UNSIGNED_BYTE, output.data);// glImage.bits());
-    //gluPerspective(60,2, 1.0, 100.0);
-    //glRotatef(0, 1, 0, 0);
-
-    //glScaled(-1, 1, 1);
-    //glRotated(90, 0, 0, 1);
-
-
-    //    glMatrixMode(GL_MODELVIEW);
-    //    glPopMatrix();
-
-    QPainter painter;
-    painter.begin(this);
-    painter.drawImage(0,0, glImage);
-    painter.end();
-}
-
-void HUD::paintHUD()
+void OverlayData::paintHUD()
 {
     if (isVisible())
     {
-        //    static quint64 interval = 0;
-        //    qDebug() << "INTERVAL:" << MG::TIME::getGroundTimeNow() - interval << __FILE__ << __LINE__;
-        //    interval = MG::TIME::getGroundTimeNow();
-
-#if (QGC_EVENTLOOP_DEBUG)
-        qDebug() << "EVENTLOOP:" << __FILE__ << __LINE__;
-#endif
-
         // Read out most important values to limit hash table lookups
         // Low-pass roll, pitch and yaw
         rollLP = rollLP * 0.2f + 0.8f * roll;
@@ -630,43 +546,43 @@ void HUD::paintHUD()
             // Waypoint
             paintText(waypointName, defaultColor, 2.0f, (-vwidth/3.0) + 10, +vheight/3.0 + 15, &painter);
 
-            // YAW INDICATOR
-            //
-            //      .
-            //    .   .
-            //   .......
-            //
-            const float yawIndicatorWidth = 4.0f;
-            const float yawIndicatorY = vheight/2.0f - 10.0f;
-            QPolygon yawIndicator(4);
-            yawIndicator.setPoint(0, QPoint(refToScreenX(0.0f), refToScreenY(yawIndicatorY)));
-            yawIndicator.setPoint(1, QPoint(refToScreenX(yawIndicatorWidth/2.0f), refToScreenY(yawIndicatorY+yawIndicatorWidth)));
-            yawIndicator.setPoint(2, QPoint(refToScreenX(-yawIndicatorWidth/2.0f), refToScreenY(yawIndicatorY+yawIndicatorWidth)));
-            yawIndicator.setPoint(3, QPoint(refToScreenX(0.0f), refToScreenY(yawIndicatorY)));
-            painter.setPen(defaultColor);
-            painter.drawPolyline(yawIndicator);
+//            // YAW INDICATOR
+//            //
+//            //      .
+//            //    .   .
+//            //   .......
+//            //
+//            const float yawIndicatorWidth = 4.0f;
+//            const float yawIndicatorY = vheight/2.0f - 10.0f;
+//            QPolygon yawIndicator(4);
+//            yawIndicator.setPoint(0, QPoint(refToScreenX(0.0f), refToScreenY(yawIndicatorY)));
+//            yawIndicator.setPoint(1, QPoint(refToScreenX(yawIndicatorWidth/2.0f), refToScreenY(yawIndicatorY+yawIndicatorWidth)));
+//            yawIndicator.setPoint(2, QPoint(refToScreenX(-yawIndicatorWidth/2.0f), refToScreenY(yawIndicatorY+yawIndicatorWidth)));
+//            yawIndicator.setPoint(3, QPoint(refToScreenX(0.0f), refToScreenY(yawIndicatorY)));
+//            painter.setPen(defaultColor);
+//            painter.drawPolyline(yawIndicator);
 
-            // CENTER
+//            // CENTER
 
-            // HEADING INDICATOR
-            //
-            //    __      __
-            //       \/\/
-            //
-            const float hIndicatorWidth = 7.0f;
-            const float hIndicatorY = -25.0f;
-            const float hIndicatorYLow = hIndicatorY + hIndicatorWidth / 6.0f;
-            const float hIndicatorSegmentWidth = hIndicatorWidth / 7.0f;
-            QPolygon hIndicator(7);
-            hIndicator.setPoint(0, QPoint(refToScreenX(0.0f-hIndicatorWidth/2.0f), refToScreenY(hIndicatorY)));
-            hIndicator.setPoint(1, QPoint(refToScreenX(0.0f-hIndicatorWidth/2.0f+hIndicatorSegmentWidth*1.75f), refToScreenY(hIndicatorY)));
-            hIndicator.setPoint(2, QPoint(refToScreenX(0.0f-hIndicatorSegmentWidth*1.0f), refToScreenY(hIndicatorYLow)));
-            hIndicator.setPoint(3, QPoint(refToScreenX(0.0f), refToScreenY(hIndicatorY)));
-            hIndicator.setPoint(4, QPoint(refToScreenX(0.0f+hIndicatorSegmentWidth*1.0f), refToScreenY(hIndicatorYLow)));
-            hIndicator.setPoint(5, QPoint(refToScreenX(0.0f+hIndicatorWidth/2.0f-hIndicatorSegmentWidth*1.75f), refToScreenY(hIndicatorY)));
-            hIndicator.setPoint(6, QPoint(refToScreenX(0.0f+hIndicatorWidth/2.0f), refToScreenY(hIndicatorY)));
-            painter.setPen(defaultColor);
-            painter.drawPolyline(hIndicator);
+//            // HEADING INDICATOR
+//            //
+//            //    __      __
+//            //       \/\/
+//            //
+//            const float hIndicatorWidth = 7.0f;
+//            const float hIndicatorY = -25.0f;
+//            const float hIndicatorYLow = hIndicatorY + hIndicatorWidth / 6.0f;
+//            const float hIndicatorSegmentWidth = hIndicatorWidth / 7.0f;
+//            QPolygon hIndicator(7);
+//            hIndicator.setPoint(0, QPoint(refToScreenX(0.0f-hIndicatorWidth/2.0f), refToScreenY(hIndicatorY)));
+//            hIndicator.setPoint(1, QPoint(refToScreenX(0.0f-hIndicatorWidth/2.0f+hIndicatorSegmentWidth*1.75f), refToScreenY(hIndicatorY)));
+//            hIndicator.setPoint(2, QPoint(refToScreenX(0.0f-hIndicatorSegmentWidth*1.0f), refToScreenY(hIndicatorYLow)));
+//            hIndicator.setPoint(3, QPoint(refToScreenX(0.0f), refToScreenY(hIndicatorY)));
+//            hIndicator.setPoint(4, QPoint(refToScreenX(0.0f+hIndicatorSegmentWidth*1.0f), refToScreenY(hIndicatorYLow)));
+//            hIndicator.setPoint(5, QPoint(refToScreenX(0.0f+hIndicatorWidth/2.0f-hIndicatorSegmentWidth*1.75f), refToScreenY(hIndicatorY)));
+//            hIndicator.setPoint(6, QPoint(refToScreenX(0.0f+hIndicatorWidth/2.0f), refToScreenY(hIndicatorY)));
+//            painter.setPen(defaultColor);
+//            painter.drawPolyline(hIndicator);
 
 
             // SETPOINT
@@ -678,11 +594,11 @@ void HUD::paintHUD()
 
             const float centerCrossWidth = 10.0f;
             // left
-            painter.drawLine(QPointF(refToScreenX(-centerWidth / 2.0f), refToScreenY(0.0f)), QPointF(refToScreenX(-centerCrossWidth / 2.0f), refToScreenY(0.0f)));
+            //painter.drawLine(QPointF(refToScreenX(-centerWidth / 2.0f), refToScreenY(0.0f)), QPointF(refToScreenX(-centerCrossWidth / 2.0f), refToScreenY(0.0f)));
             // right
-            painter.drawLine(QPointF(refToScreenX(centerWidth / 2.0f), refToScreenY(0.0f)), QPointF(refToScreenX(centerCrossWidth / 2.0f), refToScreenY(0.0f)));
+            //painter.drawLine(QPointF(refToScreenX(centerWidth / 2.0f), refToScreenY(0.0f)), QPointF(refToScreenX(centerCrossWidth / 2.0f), refToScreenY(0.0f)));
             // top
-            painter.drawLine(QPointF(refToScreenX(0.0f), refToScreenY(-centerWidth / 2.0f)), QPointF(refToScreenX(0.0f), refToScreenY(-centerCrossWidth / 2.0f)));
+            //painter.drawLine(QPointF(refToScreenX(0.0f), refToScreenY(-centerWidth / 2.0f)), QPointF(refToScreenX(0.0f), refToScreenY(-centerCrossWidth / 2.0f)));
 
 
 
@@ -760,7 +676,7 @@ void HUD::paintHUD()
 /**
  * @param pitch pitch angle in degrees (-180 to 180)
  */
-void HUD::paintPitchLines(float pitch, QPainter* painter)
+void OverlayData::paintPitchLines(float pitch, QPainter* painter)
 {
     QString label;
 
@@ -831,7 +747,7 @@ void HUD::paintPitchLines(float pitch, QPainter* painter)
     }
 }
 
-void HUD::paintPitchLinePos(QString text, float refPosX, float refPosY, QPainter* painter)
+void OverlayData::paintPitchLinePos(QString text, float refPosX, float refPosY, QPainter* painter)
 {
     //painter->setPen(QPen(QBrush, normalStrokeWidth));
 
@@ -860,7 +776,7 @@ void HUD::paintPitchLinePos(QString text, float refPosX, float refPosY, QPainter
     drawLine(refPosX+pitchWidth/2.0f, refPosY, refPosX+pitchGap/2.0f, refPosY, lineWidth, defaultColor, painter);
 }
 
-void HUD::paintPitchLineNeg(QString text, float refPosX, float refPosY, QPainter* painter)
+void OverlayData::paintPitchLineNeg(QString text, float refPosX, float refPosY, QPainter* painter)
 {
     const float pitchWidth = 30.0f;
     const float pitchGap = pitchWidth / 2.5f;
@@ -912,7 +828,7 @@ void rotatePointClockWise(QPointF& p, float angle)
     p.setY((-1.0f * sin(angle) * p.x()) + cos(angle) * p.y());
 }
 
-float HUD::refLineWidthToPen(float line)
+float OverlayData::refLineWidthToPen(float line)
 {
     return line * 2.50f;
 }
@@ -925,7 +841,7 @@ float HUD::refLineWidthToPen(float line)
  * @param angle rotation angle, in radians
  * @return p Polygon p rotated by angle around the origin point
  */
-void HUD::rotatePolygonClockWiseRad(QPolygonF& p, float angle, QPointF origin)
+void OverlayData::rotatePolygonClockWiseRad(QPolygonF& p, float angle, QPointF origin)
 {
     // Standard 2x2 rotation matrix, counter-clockwise
     //
@@ -945,7 +861,7 @@ void HUD::rotatePolygonClockWiseRad(QPolygonF& p, float angle, QPointF origin)
     }
 }
 
-void HUD::drawPolygon(QPolygonF refPolygon, QPainter* painter)
+void OverlayData::drawPolygon(QPolygonF refPolygon, QPainter* painter)
 {
     // Scale coordinates
     QPolygonF draw(refPolygon.size());
@@ -959,7 +875,7 @@ void HUD::drawPolygon(QPolygonF refPolygon, QPainter* painter)
     painter->drawPolygon(draw);
 }
 
-void HUD::drawChangeRateStrip(float xRef, float yRef, float height, float minRate, float maxRate, float value, QPainter* painter)
+void OverlayData::drawChangeRateStrip(float xRef, float yRef, float height, float minRate, float maxRate, float value, QPainter* painter)
 {
     QBrush brush(defaultColor, Qt::NoBrush);
     painter->setBrush(brush);
@@ -1004,7 +920,7 @@ void HUD::drawChangeRateStrip(float xRef, float yRef, float height, float minRat
     paintText(label, defaultColor, 3.0f, xRef+width/2.0f, yRef+height-((scaledValue - minRate)/(maxRate-minRate))*height - 1.6f, painter);
 }
 
-void HUD::drawChangeIndicatorGauge(float xRef, float yRef, float radius, float expectedMaxChange, float value, const QColor& color, QPainter* painter, bool solid)
+void OverlayData::drawChangeIndicatorGauge(float xRef, float yRef, float radius, float expectedMaxChange, float value, const QColor& color, QPainter* painter, bool solid)
 {
     // Draw the circle
     QPen circlePen(Qt::SolidLine);
@@ -1048,7 +964,7 @@ void HUD::drawChangeIndicatorGauge(float xRef, float yRef, float radius, float e
     drawPolygon(p, painter);
 }
 
-void HUD::drawLine(float refX1, float refY1, float refX2, float refY2, float width, const QColor& color, QPainter* painter)
+void OverlayData::drawLine(float refX1, float refY1, float refX2, float refY2, float width, const QColor& color, QPainter* painter)
 {
     QPen pen(Qt::SolidLine);
     pen.setWidth(refLineWidthToPen(width));
@@ -1057,7 +973,7 @@ void HUD::drawLine(float refX1, float refY1, float refX2, float refY2, float wid
     painter->drawLine(QPoint(refToScreenX(refX1), refToScreenY(refY1)), QPoint(refToScreenX(refX2), refToScreenY(refY2)));
 }
 
-void HUD::drawEllipse(float refX, float refY, float radiusX, float radiusY, float startDeg, float endDeg, float lineWidth, const QColor& color, QPainter* painter)
+void OverlayData::drawEllipse(float refX, float refY, float radiusX, float radiusY, float startDeg, float endDeg, float lineWidth, const QColor& color, QPainter* painter)
 {
     Q_UNUSED(startDeg);
     Q_UNUSED(endDeg);
@@ -1068,12 +984,12 @@ void HUD::drawEllipse(float refX, float refY, float radiusX, float radiusY, floa
     painter->drawEllipse(QPointF(refToScreenX(refX), refToScreenY(refY)), refToScreenX(radiusX), refToScreenY(radiusY));
 }
 
-void HUD::drawCircle(float refX, float refY, float radius, float startDeg, float endDeg, float lineWidth, const QColor& color, QPainter* painter)
+void OverlayData::drawCircle(float refX, float refY, float radius, float startDeg, float endDeg, float lineWidth, const QColor& color, QPainter* painter)
 {
     drawEllipse(refX, refY, radius, radius, startDeg, endDeg, lineWidth, color, painter);
 }
 
-void HUD::resizeGL(int w, int h)
+void OverlayData::resizeGL(int w, int h)
 {
     glViewport(0, 0, w, h);
     glMatrixMode(GL_PROJECTION);
@@ -1082,11 +998,10 @@ void HUD::resizeGL(int w, int h)
     //    glMatrixMode(GL_PROJECTION);
     //    glPolygonMode(GL_NONE, GL_FILL);
     //FIXME
-    //paintHUD();
-    paintNewHud();
+    paintHUD();
 }
 
-void HUD::setImageSize(int width, int height, int depth, int channels)
+void OverlayData::setImageSize(int width, int height, int depth, int channels)
 {
     // Allocate raw image in correct size
     if (width != receivedWidth || height != receivedHeight || depth != receivedDepth || channels != receivedChannels || image == NULL)
@@ -1146,7 +1061,7 @@ void HUD::setImageSize(int width, int height, int depth, int channels)
 
 }
 
-void HUD::startImage(int imgid, int width, int height, int depth, int channels)
+void OverlayData::startImage(int imgid, int width, int height, int depth, int channels)
 {
     Q_UNUSED(imgid);
     //qDebug() << "HUD: starting image (" << width << "x" << height << ", " << depth << "bits) with " << channels << "channels";
@@ -1159,7 +1074,7 @@ void HUD::startImage(int imgid, int width, int height, int depth, int channels)
     imageStarted = true;
 }
 
-void HUD::finishImage()
+void OverlayData::finishImage()
 {
     if (imageStarted)
     {
@@ -1168,7 +1083,7 @@ void HUD::finishImage()
     }
 }
 
-void HUD::commitRawDataToGL()
+void OverlayData::commitRawDataToGL()
 {
     qDebug() << __FILE__ << __LINE__ << "Copying raw data to GL buffer:" << rawImage << receivedWidth << receivedHeight << image->format();
     if (image != NULL)
@@ -1204,19 +1119,19 @@ void HUD::commitRawDataToGL()
     update();
 }
 
-void HUD::saveImage(QString fileName)
+void OverlayData::saveImage(QString fileName)
 {
     image->save(fileName);
 }
 
-void HUD::saveImage()
+void OverlayData::saveImage()
 {
     //Bring up popup
     QString fileName = "output.png";
     saveImage(fileName);
 }
 
-void HUD::startImage(quint64 timestamp)
+void OverlayData::startImage(quint64 timestamp)
 {
     if (videoEnabled && offlineDirectory != "")
     {
@@ -1225,7 +1140,7 @@ void HUD::startImage(quint64 timestamp)
     }
 }
 
-void HUD::selectOfflineDirectory()
+void OverlayData::selectOfflineDirectory()
 {
     QString fileName = QFileDialog::getExistingDirectory(this, tr("Select image directory"), QDesktopServices::storageLocation(QDesktopServices::DesktopLocation));
     if (fileName != "")
@@ -1234,17 +1149,17 @@ void HUD::selectOfflineDirectory()
     }
 }
 
-void HUD::enableHUDInstruments(bool enabled)
+void OverlayData::enableHUDInstruments(bool enabled)
 {
     hudInstrumentsEnabled = enabled;
 }
 
-void HUD::enableVideo(bool enabled)
+void OverlayData::enableVideo(bool enabled)
 {
     videoEnabled = enabled;
 }
 
-void HUD::setPixels(int imgid, const unsigned char* imageData, int length, int startIndex)
+void OverlayData::setPixels(int imgid, const unsigned char* imageData, int length, int startIndex)
 {
     Q_UNUSED(imgid);
     //    qDebug() << "at" << __FILE__ << __LINE__ << ": Received startindex" << startIndex << "and length" << length << "(" << startIndex+length << "of" << rawExpectedBytes << "bytes)";
