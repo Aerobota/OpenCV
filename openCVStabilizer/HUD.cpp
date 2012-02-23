@@ -137,12 +137,12 @@ HUD::HUD(int width, int height, QWidget* parent)
     // Set auto fill to false
     setAutoFillBackground(false);
 
-//    // Set minimum size
+    //    // Set minimum size
     setMinimumSize(80, 60);
-//    // Set preferred size
+    //    // Set preferred size
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
-//    // Fill with black background
+    //    // Fill with black background
     QImage fill = QImage(width, height, QImage::Format_Indexed8);
     fill.setNumColors(3);
     fill.setColor(0, qRgb(0, 0, 0));
@@ -155,25 +155,25 @@ HUD::HUD(int width, int height, QWidget* parent)
 
     refreshTimer->setInterval(updateInterval);
 
-    //connect(refreshTimer, SIGNAL(timeout()), this, SLOT(paintHUD()));
-    connect(refreshTimer, SIGNAL(timeout()), this, SLOT(paintNewHud()));
+    connect(refreshTimer, SIGNAL(timeout()), this, SLOT(paintHUD()));
+    //connect(refreshTimer, SIGNAL(timeout()), this, SLOT(paintNewHud()));
 
-//    fontDatabase = QFontDatabase();
-//    const QString fontFileName = ":/general/vera.ttf"; ///< Font file is part of the QRC file and compiled into the app
-//    const QString fontFamilyName = "Bitstream Vera Sans";
-//    if(!QFile::exists(fontFileName)) qDebug() << "ERROR! font file: " << fontFileName << " DOES NOT EXIST!";
+    //    fontDatabase = QFontDatabase();
+    //    const QString fontFileName = ":/general/vera.ttf"; ///< Font file is part of the QRC file and compiled into the app
+    //    const QString fontFamilyName = "Bitstream Vera Sans";
+    //    if(!QFile::exists(fontFileName)) qDebug() << "ERROR! font file: " << fontFileName << " DOES NOT EXIST!";
 
-//    fontDatabase.addApplicationFont(fontFileName);
-//    font = fontDatabase.font(fontFamilyName, "Roman", qMax(5,(int)(10.0f*scalingFactor*1.2f+0.5f)));
-//    QFont* fontPtr = &font;
-//    if (!fontPtr)
-//    {
-//        qDebug() << "ERROR! FONT NOT LOADED!";
-//    }
-//    else
-//    {
-//        if (font.family() != fontFamilyName) qDebug() << "ERROR! WRONG FONT LOADED: " << fontFamilyName;
-//    }
+    //    fontDatabase.addApplicationFont(fontFileName);
+    //    font = fontDatabase.font(fontFamilyName, "Roman", qMax(5,(int)(10.0f*scalingFactor*1.2f+0.5f)));
+    //    QFont* fontPtr = &font;
+    //    if (!fontPtr)
+    //    {
+    //        qDebug() << "ERROR! FONT NOT LOADED!";
+    //    }
+    //    else
+    //    {
+    //        if (font.family() != fontFamilyName) qDebug() << "ERROR! WRONG FONT LOADED: " << fontFamilyName;
+    //    }
 
     createActions();
 
@@ -433,10 +433,10 @@ void HUD::paintNewHud()
 
 
 
-    makeCurrent();
-    glMatrixMode(GL_MODELVIEW);
-    glPushMatrix();
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    //    makeCurrent();
+    //    glMatrixMode(GL_MODELVIEW);
+    //    glPushMatrix();
+    //    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     cv::Mat frame;
 
@@ -457,30 +457,31 @@ void HUD::paintNewHud()
 
         video = new videoStabilizer(imageSize);
         //connect(video,SIGNAL(gotDuration(double&)), this, SLOT(updateTimeLabel(double&)));
-
         //glPixelZoom(1.0f, 1.0f);
     }
+
+    //glDrawPixels(frame.cols, frame.rows, GL_RGB, GL_UNSIGNED_BYTE, frame.data);// glImage.bits());
 
     cv::cvtColor(frame,frame, CV_BGR2GRAY);
     cv::Mat output = cv::Mat::zeros(frame.rows, frame.cols, CV_8UC1);
     video->stabilizeImage(frame,output);
     cv::cvtColor(output,output, CV_GRAY2RGB);
-
-
     glImage = QImage((const unsigned char*)(output.data), output.cols, output.rows, QImage::Format_RGB888);
 
-
-    glDrawPixels(glImage.width(), glImage.height(), GL_RGB, GL_UNSIGNED_BYTE, glImage.bits());
+    //glDrawPixels(output.cols, output.rows, GL_RGB, GL_UNSIGNED_BYTE, output.data);// glImage.bits());
+    //gluPerspective(60,2, 1.0, 100.0);
+    //glRotatef(0, 1, 0, 0);
 
     //glScaled(-1, 1, 1);
     //glRotated(90, 0, 0, 1);
 
 
-    glMatrixMode(GL_MODELVIEW);
-    glPopMatrix();
+    //    glMatrixMode(GL_MODELVIEW);
+    //    glPopMatrix();
 
     QPainter painter;
     painter.begin(this);
+    painter.drawImage(0,0, glImage);
     painter.end();
 }
 
@@ -541,9 +542,9 @@ void HUD::paintHUD()
         // OPEN GL PAINTING
         // Store model view matrix to be able to reset it to the previous state
         makeCurrent();
-//        glMatrixMode(GL_MODELVIEW);
-//        glPushMatrix();
-//        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        //        glMatrixMode(GL_MODELVIEW);
+        //        glPushMatrix();
+        //        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // Fill with black background
         if (videoEnabled)
@@ -578,7 +579,7 @@ void HUD::paintHUD()
 
             glImage = QImage((const unsigned char*)(output.data), output.cols, output.rows, QImage::Format_RGB888);
 
-            glDrawPixels(glImage.width(), glImage.height(), GL_RGB, GL_UNSIGNED_BYTE, glImage.bits());
+            //glDrawPixels(glImage.width(), glImage.height(), GL_RGB, GL_UNSIGNED_BYTE, glImage.bits());
         }
         else
         {
@@ -586,8 +587,8 @@ void HUD::paintHUD()
             paintCenterBackground(roll, pitch, yawTrans);
         }
 
-//        glMatrixMode(GL_MODELVIEW);
-//        glPopMatrix();
+        //        glMatrixMode(GL_MODELVIEW);
+        //        glPopMatrix();
 
         // END OF OPENGL PAINTING
 
@@ -604,7 +605,7 @@ void HUD::paintHUD()
             painter.setRenderHint(QPainter::HighQualityAntialiasing, true);
             painter.translate((this->vwidth/2.0+xCenterOffset)*scalingFactor, (this->vheight/2.0+yCenterOffset)*scalingFactor);
 
-
+            painter.drawImage(refToScreenX((-vwidth/2.0)),refToScreenY( -vheight/2.0), glImage.scaled(this->width(), this->height(), Qt::KeepAspectRatioByExpanding));
 
 
             // COORDINATE FRAME IS NOW (0,0) at CENTER OF WIDGET
@@ -745,6 +746,7 @@ void HUD::paintHUD()
         {
             QPainter painter;
             painter.begin(this);
+            painter.drawImage(0,0, glImage.scaled(this->width(), this->height(), Qt::KeepAspectRatioByExpanding));
             painter.end();
         }
         //glDisable(GL_MULTISAMPLE);
@@ -1076,9 +1078,9 @@ void HUD::resizeGL(int w, int h)
     glViewport(0, 0, w, h);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-//    //glOrtho(0, w, 0, h, -1, 1);
-//    glMatrixMode(GL_PROJECTION);
-//    glPolygonMode(GL_NONE, GL_FILL);
+    //    //glOrtho(0, w, 0, h, -1, 1);
+    //    glMatrixMode(GL_PROJECTION);
+    //    glPolygonMode(GL_NONE, GL_FILL);
     //FIXME
     //paintHUD();
     paintNewHud();
