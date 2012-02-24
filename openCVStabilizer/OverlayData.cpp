@@ -27,38 +27,21 @@ OverlayData::OverlayData(int width, int height, QWidget* parent)
     yawInt(0.0f),
     mode(tr("UNKNOWN MODE")),
     state(tr("UNKNOWN STATE")),
-    fuelStatus(tr("00.0V (00m:00s)")),
+    //fuelStatus(tr("00.0V (00m:00s)")),
     xCenterOffset(0.0f),
     yCenterOffset(0.0f),
     vwidth(200.0f),
     vheight(150.0f),
-    vGaugeSpacing(50.0f),
-    vPitchPerDeg(6.0f), ///< 4 mm y translation per degree)
-    rawBuffer1(NULL),
-    rawBuffer2(NULL),
-    rawImage(NULL),
-    rawLastIndex(0),
-    rawExpectedBytes(0),
-    bytesPerLine(1),
-    imageStarted(false),
-    receivedDepth(8),
-    receivedChannels(1),
-    receivedWidth(640),
-    receivedHeight(480),
+    //vGaugeSpacing(50.0f),
+    //vPitchPerDeg(6.0f), ///< 4 mm y translation per degree)
     defaultColor(QColor(255, 255, 255)),
-    setPointColor(QColor(255, 255, 255)),
-    warningColor(Qt::yellow),
-    criticalColor(Qt::red),
     infoColor(QColor(255, 255, 255)),
-    fuelColor(criticalColor),
-    warningBlinkRate(5),
     refreshTimer(new QTimer(this)),
-    noCamera(true),
-    hardwareAcceleration(true),
-    strongStrokeWidth(1.5f),
-    normalStrokeWidth(1.0f),
-    fineStrokeWidth(0.5f),
-    waypointName(""),
+    //noCamera(true),
+    //hardwareAcceleration(true),
+    //strongStrokeWidth(1.5f),
+    //normalStrokeWidth(1.0f),
+    //fineStrokeWidth(0.5f),
     roll(0.0f),
     pitch(0.0f),
     yaw(0.0f),
@@ -66,25 +49,22 @@ OverlayData::OverlayData(int width, int height, QWidget* parent)
     pitchLP(0.0f),
     yawLP(0.0f),
     yawDiff(0.0f),
-    xPos(0.0),
-    yPos(0.0),
-    zPos(0.0),
-    xSpeed(0.0),
-    ySpeed(0.0),
-    zSpeed(0.0),
-    lastSpeedUpdate(0),
-    totalSpeed(0.0),
-    totalAcc(0.0),
+    //xPos(0.0),
+    //yPos(0.0),
+    //zPos(0.0),
+    //xSpeed(0.0),
+    //ySpeed(0.0),
+    //zSpeed(0.0),
+    //lastSpeedUpdate(0),
+    //totalSpeed(0.0),
+    //totalAcc(0.0),
     lat(0.0),
     lon(0.0),
-    alt(0.0),
-    load(0.0f),
-    offlineDirectory(""),
-    nextOfflineImage(""),
+    alt(0.0),    
+    //offlineDirectory(""),
+    //nextOfflineImage(""),
     hudInstrumentsEnabled(false),
     videoEnabled(true),
-    xImageFactor(1.0),
-    yImageFactor(1.0),
     video(NULL),
     isRecord(false),
     existFileMovie(false)
@@ -99,8 +79,6 @@ OverlayData::OverlayData(int width, int height, QWidget* parent)
     fill.setColor(1, qRgb(0, 0, 0));
     fill.setColor(2, qRgb(0, 0, 0));
     fill.fill(0);
-
-    //captureRTSP.open("/Volumes/HDD_120/vuelos/09022012/20120209093344.mp4");
 
     refreshTimer->setInterval(updateInterval);
 
@@ -198,7 +176,7 @@ void OverlayData::paintCenterBackground(float roll, float pitch, float yaw)
     // Translate in the direction of the rotation based
     // on the pitch. On the 777, a pitch of 1 degree = 2 mm
     //glTranslatef(0, ((-pitch/M_PI)*180.0f * vPitchPerDeg), 0);
-    glTranslatef(0.0f, (-pitch * vPitchPerDeg * 16.5f), 0.0f);
+    glTranslatef(0.0f, 0.0f, 0.0f);
 
     // Ground
     glColor3ub(179,102,0);
@@ -300,9 +278,9 @@ void OverlayData::setupGLView(float referencePositionX, float referencePositionY
     //glScalef(scaleX, scaleY, 1.0f);
 }
 
-void OverlayData::paintRollPitchStrips()
-{
-}
+//void OverlayData::paintRollPitchStrips()
+//{
+//}
 
 
 void OverlayData::paintEvent(QPaintEvent *event)
@@ -317,56 +295,8 @@ void OverlayData::paintHUD()
 {
     if (isVisible())
     {
-        // Read out most important values to limit hash table lookups
-        // Low-pass roll, pitch and yaw
-        rollLP = rollLP * 0.2f + 0.8f * roll;
-        pitchLP = pitchLP * 0.2f + 0.8f * pitch;
-        yawLP = yawLP * 0.2f + 0.8f * yaw;
-
-        // Translate for yaw
-        const float maxYawTrans = 60.0f;
-
-        float newYawDiff = yawDiff;
-        if (isinf(newYawDiff)) newYawDiff = yawDiff;
-        if (newYawDiff > M_PI) newYawDiff = newYawDiff - M_PI;
-
-        if (newYawDiff < -M_PI) newYawDiff = newYawDiff + M_PI;
-
-        newYawDiff = yawDiff * 0.8 + newYawDiff * 0.2;
-
-        yawDiff = newYawDiff;
-
-        yawInt += newYawDiff;
-
-        if (yawInt > M_PI) yawInt = (float)M_PI;
-        if (yawInt < -M_PI) yawInt = (float)-M_PI;
-
-        float yawTrans = yawInt * (float)maxYawTrans;
-        yawInt *= 0.6f;
-
-        if ((yawTrans < 5.0) && (yawTrans > -5.0)) yawTrans = 0;
-
-        // Negate to correct direction
-        yawTrans = -yawTrans;
-
-        //qDebug() << "yaw translation" << yawTrans << "integral" << yawInt << "difference" << yawDiff << "yaw" << yaw;
-
-        // Update scaling factor
-        // adjust scaling to fit both horizontally and vertically
-        scalingFactor = this->width()/vwidth;
-        double scalingFactorH = this->height()/vheight;
-        if (scalingFactorH < scalingFactor) scalingFactor = scalingFactorH;
-
-
-
-        // OPEN GL PAINTING
-        // Store model view matrix to be able to reset it to the previous state
         makeCurrent();
-        //        glMatrixMode(GL_MODELVIEW);
-        //        glPushMatrix();
-        //        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // Fill with black background
         if (videoEnabled)
         {
             cv::Mat frame;
@@ -374,8 +304,6 @@ void OverlayData::paintHUD()
             if(!captureRTSP.read(frame))
             {
                 qDebug()  << "No frame" ;
-                //refreshTimer->stop();
-                //captureRTSP.release();
                 cv::waitKey();
             }
 
@@ -390,8 +318,6 @@ void OverlayData::paintHUD()
 
                 video = new videoStabilizer(imageSize);
                 connect(video,SIGNAL(gotDuration(double&)), this, SLOT(updateTimeLabel(double&)));
-
-                //glPixelZoom(1.0f, 1.0f);
             }
 
             if(captureRTSP.isOpened())
@@ -416,27 +342,24 @@ void OverlayData::paintHUD()
 
 
                 glImage = QImage((const unsigned char*)(output.data), output.cols, output.rows, QImage::Format_RGB888);
-            }
-            //glDrawPixels(glImage.width(), glImage.height(), GL_RGB, GL_UNSIGNED_BYTE, glImage.bits());
+            }            
         }
         else
-        {
-            // Blue / brown background
-            paintCenterBackground(roll, pitch, yawTrans);
+        {            
+            paintCenterBackground(0, 0, 0);
         }
-
-        //        glMatrixMode(GL_MODELVIEW);
-        //        glPopMatrix();
 
         // END OF OPENGL PAINTING
 
         if (hudInstrumentsEnabled)
         {
+            // Update scaling factor
+            // adjust scaling to fit both horizontally and vertically
+            scalingFactor = this->width()/vwidth;
+            double scalingFactorH = this->height()/vheight;
+            if (scalingFactorH < scalingFactor)
+                scalingFactor = scalingFactorH;
 
-            //glEnable(GL_MULTISAMPLE);
-
-            // QT PAINTING
-            //makeCurrent();
             QPainter painter;
             painter.begin(this);
             painter.setRenderHint(QPainter::Antialiasing, true);
@@ -491,181 +414,9 @@ void OverlayData::paintHUD()
     }
 }
 
-void OverlayData::paintPitchLines(float pitch, QPainter* painter)
-{
-    QString label;
-
-    const float yDeg = vPitchPerDeg;
-    const float lineDistance = 5.0f; ///< One pitch line every 10 degrees
-    const float posIncrement = yDeg * lineDistance;
-    float posY = posIncrement;
-    const float posLimit = sqrt(pow(vwidth, 2.0f) + pow(vheight, 2.0f));
-
-    const float offsetAbs = pitch * yDeg;
-
-    float offset = pitch;
-    if (offset < 0) offset = -offset;
-    int offsetCount = 0;
-    while (offset > lineDistance)
-    {
-        offset -= lineDistance;
-        offsetCount++;
-    }
-
-    int iPos = (int)(0.5f + lineDistance); ///< The first line
-    int iNeg = (int)(-0.5f - lineDistance); ///< The first line
-
-    offset *= yDeg;
-
-
-    painter->setPen(defaultColor);
-
-    posY = -offsetAbs + posIncrement; //+ 100;// + lineDistance;
-
-    while (posY < posLimit)
-    {
-        paintPitchLinePos(label.sprintf("%3d", iPos), 0.0f, -posY, painter);
-        posY += posIncrement;
-        iPos += (int)lineDistance;
-    }
-
-
-
-    // HORIZON
-    //
-    //    ------------    ------------
-    //
-    const float pitchWidth = 30.0f;
-    const float pitchGap = pitchWidth / 2.5f;
-    const QColor horizonColor = defaultColor;
-    const float diagonal = sqrt(pow(vwidth, 2.0f) + pow(vheight, 2.0f));
-    const float lineWidth = refLineWidthToPen(0.5f);
-
-    // Left horizon
-    //drawLine(0.0f-diagonal, offsetAbs, 0.0f-pitchGap/2.0f, offsetAbs, lineWidth, horizonColor, painter);
-    // Right horizon
-    //drawLine(0.0f+pitchGap/2.0f, offsetAbs, 0.0f+diagonal, offsetAbs, lineWidth, horizonColor, painter);
-
-    drawLine(0.0f-diagonal, offsetAbs, 0.0f-pitchGap/2.0f, offsetAbs, lineWidth, horizonColor, painter);
-    drawLine(0.0f+pitchGap/2.0f, offsetAbs, 0.0f+diagonal, offsetAbs, lineWidth, horizonColor, painter);
-
-    label.clear();
-
-    posY = offsetAbs  + posIncrement;
-
-
-    while (posY < posLimit)
-    {
-        paintPitchLineNeg(label.sprintf("%3d", iNeg), 0.0f, posY, painter);
-        posY += posIncrement;
-        iNeg -= (int)lineDistance;
-    }
-}
-
-void OverlayData::paintPitchLinePos(QString text, float refPosX, float refPosY, QPainter* painter)
-{
-    //painter->setPen(QPen(QBrush, normalStrokeWidth));
-
-    const float pitchWidth = 30.0f;
-    const float pitchGap = pitchWidth / 2.5f;
-    const float pitchHeight = pitchWidth / 12.0f;
-    const float textSize = pitchHeight * 1.1f;
-    const float lineWidth = 0.5f;
-
-    // Positive pitch indicator:
-    //
-    //      _______      _______
-    //     |10                  |
-    //
-
-    // Left vertical line
-    drawLine(refPosX-pitchWidth/2.0f, refPosY, refPosX-pitchWidth/2.0f, refPosY+pitchHeight, lineWidth, defaultColor, painter);
-    // Left horizontal line
-    drawLine(refPosX-pitchWidth/2.0f, refPosY, refPosX-pitchGap/2.0f, refPosY, lineWidth, defaultColor, painter);
-    // Text left
-    paintText(text, defaultColor, textSize, refPosX-pitchWidth/2.0 + 0.75f, refPosY + pitchHeight - 1.75f, painter);
-
-    // Right vertical line
-    drawLine(refPosX+pitchWidth/2.0f, refPosY, refPosX+pitchWidth/2.0f, refPosY+pitchHeight, lineWidth, defaultColor, painter);
-    // Right horizontal line
-    drawLine(refPosX+pitchWidth/2.0f, refPosY, refPosX+pitchGap/2.0f, refPosY, lineWidth, defaultColor, painter);
-}
-
-void OverlayData::paintPitchLineNeg(QString text, float refPosX, float refPosY, QPainter* painter)
-{
-    const float pitchWidth = 30.0f;
-    const float pitchGap = pitchWidth / 2.5f;
-    const float pitchHeight = pitchWidth / 12.0f;
-    const float textSize = pitchHeight * 1.1f;
-    const float segmentWidth = ((pitchWidth - pitchGap)/2.0f) / 7.0f; ///< Four lines and three gaps -> 7 segments
-
-    const float lineWidth = 0.1f;
-
-    // Negative pitch indicator:
-    //
-    //      -10
-    //     _ _ _ _|     |_ _ _ _
-    //
-    //
-
-    // Left vertical line
-    drawLine(refPosX-pitchGap/2.0, refPosY, refPosX-pitchGap/2.0, refPosY-pitchHeight, lineWidth, defaultColor, painter);
-    // Left horizontal line with four segments
-    for (int i = 0; i < 7; i+=2)
-    {
-        drawLine(refPosX-pitchWidth/2.0+(i*segmentWidth), refPosY, refPosX-pitchWidth/2.0+(i*segmentWidth)+segmentWidth, refPosY, lineWidth, defaultColor, painter);
-    }
-    // Text left
-    paintText(text, defaultColor, textSize, refPosX-pitchWidth/2.0f + 0.75f, refPosY + pitchHeight - 1.75f, painter);
-
-    // Right vertical line
-    drawLine(refPosX+pitchGap/2.0, refPosY, refPosX+pitchGap/2.0, refPosY-pitchHeight, lineWidth, defaultColor, painter);
-    // Right horizontal line with four segments
-    for (int i = 0; i < 7; i+=2)
-    {
-        drawLine(refPosX+pitchWidth/2.0f-(i*segmentWidth), refPosY, refPosX+pitchWidth/2.0f-(i*segmentWidth)-segmentWidth, refPosY, lineWidth, defaultColor, painter);
-    }
-}
-
-void rotatePointClockWise(QPointF& p, float angle)
-{
-    // Standard 2x2 rotation matrix, counter-clockwise
-    //
-    //   |  cos(phi)   sin(phi) |
-    //   | -sin(phi)   cos(phi) |
-    //
-
-    //p.setX(cos(angle) * p.x() + sin(angle) * p.y());
-    //p.setY(-sin(angle) * p.x() + cos(angle) * p.y());
-
-
-    p.setX(cos(angle) * p.x() + sin(angle)* p.y());
-    p.setY((-1.0f * sin(angle) * p.x()) + cos(angle) * p.y());
-}
-
 float OverlayData::refLineWidthToPen(float line)
 {
     return line * 2.50f;
-}
-
-void OverlayData::rotatePolygonClockWiseRad(QPolygonF& p, float angle, QPointF origin)
-{
-    // Standard 2x2 rotation matrix, counter-clockwise
-    //
-    //   |  cos(phi)   sin(phi) |
-    //   | -sin(phi)   cos(phi) |
-    //
-    for (int i = 0; i < p.size(); i++)
-    {
-        QPointF curr = p.at(i);
-
-        const float x = curr.x();
-        const float y = curr.y();
-
-        curr.setX(((cos(angle) * (x-origin.x())) + (-sin(angle) * (y-origin.y()))) + origin.x());
-        curr.setY(((sin(angle) * (x-origin.x())) + (cos(angle) * (y-origin.y()))) + origin.y());
-        p.replace(i, curr);
-    }
 }
 
 void OverlayData::drawPolygon(QPolygonF refPolygon, QPainter* painter)
@@ -765,50 +516,6 @@ void OverlayData::drawHorizontalIndicator(float xRef, float yRef, float height, 
     paintText(label2, defaultColor, 3.0f, xRef+height-((scaledValue - minRate)/(maxRate-minRate))*height - 1.6, yRef-4.0f, painter);
 }
 
-void OverlayData::drawChangeIndicatorGauge(float xRef, float yRef, float radius, float expectedMaxChange, float value, const QColor& color, QPainter* painter, bool solid)
-{
-    // Draw the circle
-    QPen circlePen(Qt::SolidLine);
-    if (!solid) circlePen.setStyle(Qt::DotLine);
-    circlePen.setWidth(refLineWidthToPen(0.5f));
-    circlePen.setColor(defaultColor);
-    painter->setBrush(Qt::NoBrush);
-    painter->setPen(circlePen);
-    drawCircle(xRef, yRef, radius, 200.0f, 170.0f, 1.0f, color, painter);
-
-    QString label;
-    label.sprintf("%05.1f", value);
-
-    // Draw the value
-    paintText(label, color, 4.5f, xRef-7.5f, yRef-2.0f, painter);
-
-    // Draw the needle
-    // Scale the rotation so that the gauge does one revolution
-    // per max. change
-    const float rangeScale = (2.0f * M_PI) / expectedMaxChange;
-    const float maxWidth = radius / 10.0f;
-    const float minWidth = maxWidth * 0.3f;
-
-    QPolygonF p(6);
-
-    p.replace(0, QPointF(xRef-maxWidth/2.0f, yRef-radius * 0.5f));
-    p.replace(1, QPointF(xRef-minWidth/2.0f, yRef-radius * 0.9f));
-    p.replace(2, QPointF(xRef+minWidth/2.0f, yRef-radius * 0.9f));
-    p.replace(3, QPointF(xRef+maxWidth/2.0f, yRef-radius * 0.5f));
-    p.replace(4, QPointF(xRef,               yRef-radius * 0.46f));
-    p.replace(5, QPointF(xRef-maxWidth/2.0f, yRef-radius * 0.5f));
-
-    rotatePolygonClockWiseRad(p, value*rangeScale, QPointF(xRef, yRef));
-
-    QBrush indexBrush;
-    indexBrush.setColor(defaultColor);
-    indexBrush.setStyle(Qt::SolidPattern);
-    painter->setPen(Qt::SolidLine);
-    painter->setPen(defaultColor);
-    painter->setBrush(indexBrush);
-    drawPolygon(p, painter);
-}
-
 void OverlayData::drawLine(float refX1, float refY1, float refX2, float refY2, float width, const QColor& color, QPainter* painter)
 {
     QPen pen(Qt::SolidLine);
@@ -816,22 +523,6 @@ void OverlayData::drawLine(float refX1, float refY1, float refX2, float refY2, f
     pen.setColor(color);
     painter->setPen(pen);
     painter->drawLine(QPoint(refToScreenX(refX1), refToScreenY(refY1)), QPoint(refToScreenX(refX2), refToScreenY(refY2)));
-}
-
-void OverlayData::drawEllipse(float refX, float refY, float radiusX, float radiusY, float startDeg, float endDeg, float lineWidth, const QColor& color, QPainter* painter)
-{
-    Q_UNUSED(startDeg);
-    Q_UNUSED(endDeg);
-    QPen pen(painter->pen().style());
-    pen.setWidth(refLineWidthToPen(lineWidth));
-    pen.setColor(color);
-    painter->setPen(pen);
-    painter->drawEllipse(QPointF(refToScreenX(refX), refToScreenY(refY)), refToScreenX(radiusX), refToScreenY(radiusY));
-}
-
-void OverlayData::drawCircle(float refX, float refY, float radius, float startDeg, float endDeg, float lineWidth, const QColor& color, QPainter* painter)
-{
-    drawEllipse(refX, refY, radius, radius, startDeg, endDeg, lineWidth, color, painter);
 }
 
 void OverlayData::resizeGL(int w, int h)
@@ -846,178 +537,9 @@ void OverlayData::resizeGL(int w, int h)
     //paintHUD();
 }
 
-void OverlayData::setImageSize(int width, int height, int depth, int channels)
-{
-    // Allocate raw image in correct size
-    if (width != receivedWidth || height != receivedHeight || depth != receivedDepth || channels != receivedChannels || image == NULL)
-    {
-        // Set new size
-        if (width > 0) receivedWidth  = width;
-        if (height > 0) receivedHeight = height;
-        if (depth > 1) receivedDepth = depth;
-        if (channels > 1) receivedChannels = channels;
-
-        rawExpectedBytes = (receivedWidth * receivedHeight * receivedDepth * receivedChannels) / 8;
-        bytesPerLine = rawExpectedBytes / receivedHeight;
-        // Delete old buffers if necessary
-        rawImage = NULL;
-        if (rawBuffer1 != NULL) delete rawBuffer1;
-        if (rawBuffer2 != NULL) delete rawBuffer2;
-
-        rawBuffer1 = (unsigned char*)malloc(rawExpectedBytes);
-        rawBuffer2 = (unsigned char*)malloc(rawExpectedBytes);
-        rawImage = rawBuffer1;
-        // TODO check if old image should be deleted
-
-        // Set image format
-        // 8 BIT GREYSCALE IMAGE
-        if (depth <= 8 && channels == 1)
-        {
-            image = new QImage(receivedWidth, receivedHeight, QImage::Format_Indexed8);
-            // Create matching color table
-            image->setNumColors(256);
-            for (int i = 0; i < 256; i++)
-            {
-                image->setColor(i, qRgb(i, i, i));
-                //qDebug() << __FILE__ << __LINE__ << std::hex << i;
-            }
-
-        }
-        // 32 BIT COLOR IMAGE WITH ALPHA VALUES (#ARGB)
-        else
-        {
-            image = new QImage(receivedWidth, receivedHeight, QImage::Format_ARGB32);
-        }
-
-        // Fill first channel of image with black pixels
-        image->fill(0);
-        glImage = QGLWidget::convertToGLFormat(*image);
-
-        qDebug() << __FILE__ << __LINE__ << "Setting up image";
-
-        // Set size once
-        setFixedSize(receivedWidth, receivedHeight);
-        setMinimumSize(receivedWidth, receivedHeight);
-        setMaximumSize(receivedWidth, receivedHeight);
-        // Lock down the size
-        //setSizePolicy(QSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed));
-        //resize(receivedWidth, receivedHeight);
-    }
-
-}
-
-void OverlayData::startImage(int imgid, int width, int height, int depth, int channels)
-{
-    Q_UNUSED(imgid);
-    //qDebug() << "HUD: starting image (" << width << "x" << height << ", " << depth << "bits) with " << channels << "channels";
-
-    // Copy previous image to screen if it hasn't been finished properly
-    finishImage();
-
-    // Reset image size if necessary
-    setImageSize(width, height, depth, channels);
-    imageStarted = true;
-}
-
-void OverlayData::finishImage()
-{
-    if (imageStarted)
-    {
-        commitRawDataToGL();
-        imageStarted = false;
-    }
-}
-
-void OverlayData::commitRawDataToGL()
-{
-    qDebug() << __FILE__ << __LINE__ << "Copying raw data to GL buffer:" << rawImage << receivedWidth << receivedHeight << image->format();
-    if (image != NULL)
-    {
-        QImage::Format format = image->format();
-        QImage* newImage = new QImage(rawImage, receivedWidth, receivedHeight, format);
-        if (format == QImage::Format_Indexed8)
-        {
-            // Create matching color table
-            newImage->setNumColors(256);
-            for (int i = 0; i < 256; i++)
-            {
-                newImage->setColor(i, qRgb(i, i, i));
-                //qDebug() << __FILE__ << __LINE__ << std::hex << i;
-            }
-        }
-
-        glImage = QGLWidget::convertToGLFormat(*newImage);
-        delete image;
-        image = newImage;
-        // Switch buffers
-        if (rawImage == rawBuffer1)
-        {
-            rawImage = rawBuffer2;
-            //qDebug() << "Now buffer 2";
-        }
-        else
-        {
-            rawImage = rawBuffer1;
-            //qDebug() << "Now buffer 1";
-        }
-    }
-    update();
-}
-
-void OverlayData::saveImage(QString fileName)
-{
-    image->save(fileName);
-}
-
-void OverlayData::saveImage()
-{
-    //Bring up popup
-    QString fileName = "output.png";
-    saveImage(fileName);
-}
-
-void OverlayData::startImage(quint64 timestamp)
-{
-    if (videoEnabled && offlineDirectory != "")
-    {
-        // Load and diplay image file
-        nextOfflineImage = QString(offlineDirectory + "/%1.bmp").arg(timestamp);
-    }
-}
-
 void OverlayData::enableHUDInstruments(bool enabled)
 {
     hudInstrumentsEnabled = enabled;
-}
-
-void OverlayData::setPixels(int imgid, const unsigned char* imageData, int length, int startIndex)
-{
-    Q_UNUSED(imgid);
-    //    qDebug() << "at" << __FILE__ << __LINE__ << ": Received startindex" << startIndex << "and length" << length << "(" << startIndex+length << "of" << rawExpectedBytes << "bytes)";
-
-    if (imageStarted)
-    {
-        //if (rawLastIndex != startIndex) qDebug() << "PACKET LOSS!";
-
-        if (startIndex+length > rawExpectedBytes)
-        {
-            qDebug() << "HUD: OVERFLOW! startIndex:" << startIndex << "length:" << length << "image raw size" << ((receivedWidth * receivedHeight * receivedChannels * receivedDepth) / 8) - 1;
-        }
-        else
-        {
-            memcpy(rawImage+startIndex, imageData, length);
-
-            rawLastIndex = startIndex+length;
-
-            // Check if we just reached the end of the image
-            if (startIndex+length == rawExpectedBytes)
-            {
-                //qDebug() << "HUD: END OF IMAGE REACHED!";
-                finishImage();
-                rawLastIndex = 0;
-            }
-        }
-    }
 }
 
 void OverlayData::openFile()

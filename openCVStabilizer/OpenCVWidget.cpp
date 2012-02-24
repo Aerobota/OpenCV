@@ -9,11 +9,11 @@ OpenCVWidget::OpenCVWidget(QWidget *parent) :
 
     OverlayData* overlayData = new OverlayData(300, 300, this);
     QHBoxLayout* hlButtons = new QHBoxLayout();
-    btPlay = new QPushButton("Play");
-    btStop = new QPushButton("Stop");
-    btFile = new QPushButton("File");
-    btRTSP = new QPushButton("RTSP");
-    btRecord = new QPushButton("Record");
+    btPlay = new QPushButton(QIcon(":/icons/Play.png"), "", this);
+    btStop = new QPushButton(QIcon(":/icons/Stop.png"), "", this);
+    btFile = new QPushButton(QIcon(":/icons/Open.png"), "", this);
+    btRTSP = new QPushButton(QIcon(":/icons/Radio.png"), "", this);
+    btRecord = new QPushButton(QIcon(":/icons/Record.png"), "", this);
 
     lbTitle = new QLabel("---");
     lbTitle->setMaximumHeight(15);
