@@ -37,12 +37,24 @@ This file is part of the QGROUNDCONTROL project
 #include <QPainter>
 #include <QFontDatabase>
 #include <QTimer>
+#include <QTime>
+#include <QInputDialog>
+#include <QShowEvent>
+#include <QContextMenuEvent>
+#include <QMenu>
+#include <QDesktopServices>
+#include <QFileDialog>
 
+#include <QDebug>
+#include <cmath>
+#include <qmath.h>
+#include <limits>
 
 #include "core/core.hpp"
 #include "highgui/highgui.hpp"
 #include "../videoStabilizer.h"
 #include "imgproc/imgproc.hpp"
+
 /**
  * @brief Displays a Head Up Display (HUD)
  *
@@ -54,59 +66,69 @@ class OverlayData : public QGLWidget
 {
     Q_OBJECT
 public:
+    /**
+     * @warning The HUD widget will not start painting its content automatically
+     *          to update the view, start the auto-update by calling HUD::start().
+     *
+     * @param width
+     * @param height
+     * @param parent
+     */
     OverlayData(int width = 640, int height = 480, QWidget* parent = NULL);
     ~OverlayData();
 
     void setImageSize(int width, int height, int depth, int channels);
     void resizeGL(int w, int h);
 
+    int xMouse, yMouse;
     cv::VideoCapture captureRTSP;
     cv::VideoWriter writerMovie;
-    QTimer* mytimer;
     /** This is the video stabilizer algorithm class*/
     videoStabilizer* video;
+    bool isRecord;
+    bool existFileMovie;
+
+    void mousePressEvent(QMouseEvent *);
 
 public slots:
     void initializeGL();
-    //void paintGL();
-
-    /** @brief Set the currently monitored UAS */
-//    void setActiveUAS(UASInterface* uas);
-
-//    void updateAttitude(UASInterface* uas, double roll, double pitch, double yaw, quint64 timestamp);
-////    void updateAttitudeThrustSetPoint(UASInterface*, double rollDesired, double pitchDesired, double yawDesired, double thrustDesired, quint64 usec);
-//    void updateBattery(UASInterface*, double, double, int);
-//    void receiveHeartbeat(UASInterface*);
-//    void updateThrust(UASInterface*, double);
-//    void updateLocalPosition(UASInterface*,double,double,double,quint64);
-//    void updateGlobalPosition(UASInterface*,double,double,double,quint64);
-//    void updateSpeed(UASInterface*,double,double,double,quint64);
-//    void updateState(UASInterface*,QString);
-//    void updateMode(int id,QString mode, QString description);
-//    void updateLoad(UASInterface*, double);
-//    void selectWaypoint(int uasId, int id);
-
     void startImage(quint64 timestamp);
     void startImage(int imgid, int width, int height, int depth, int channels);
     void setPixels(int imgid, const unsigned char* imageData, int length, int startIndex);
     void finishImage();
     void saveImage();
-    void saveImage(QString fileName);
-    /** @brief Select directory where to load the offline files from */
-    void selectOfflineDirectory();
+    void saveImage(QString fileName);    
     /** @brief Enable the HUD instruments */
     void enableHUDInstruments(bool enabled);
-    /** @brief Enable Video */
-    void enableVideo(bool enabled);
-
 
 protected slots:
+    /**
+     * This functions works in the OpenGL view, which is already translated by
+     * the x and y center offsets.
+     *
+     */
     void paintCenterBackground(float roll, float pitch, float yaw);
     void paintRollPitchStrips();
+    /**
+     * @param pitch pitch angle in degrees (-180 to 180)
+     */
     void paintPitchLines(float pitch, QPainter* painter);
-    /** @brief Paint text on top of the image and OpenGL drawings */
+    /**
+     * Paint text on top of the image and OpenGL drawings
+     *
+     * @param text chars to write
+     * @param color text color
+     * @param fontSize text size in mm
+     * @param refX position in reference units (mm of the real instrument). This is relative to the measurement unit position, NOT in pixels.
+     * @param refY position in reference units (mm of the real instrument). This is relative to the measurement unit position, NOT in pixels.
+     */
     void paintText(QString text, QColor color, float fontSize, float refX, float refY, QPainter* painter);
-    /** @brief Setup the OpenGL view for drawing a sub-component of the HUD */
+    /** @brief Setup the OpenGL view for drawing a sub-component of the HUD
+     * @param referencePositionX horizontal position in the reference mm-unit space
+     * @param referencePositionY horizontal position in the reference mm-unit space
+     * @param referenceWidth width in the reference mm-unit space
+     * @param referenceHeight width in the reference mm-unit space
+     */
     void setupGLView(float referencePositionX, float referencePositionY, float referenceWidth, float referenceHeight);
     void paintHUD();
     void paintPitchLinePos(QString text, float refPosX, float refPosY, QPainter* painter);
@@ -116,22 +138,42 @@ protected slots:
     void drawEllipse(float refX, float refY, float radiusX, float radiusY, float startDeg, float endDeg, float lineWidth, const QColor& color, QPainter* painter);
     void drawCircle(float refX, float refY, float radius, float startDeg, float endDeg, float lineWidth, const QColor& color, QPainter* painter);
 
-    void drawChangeRateStrip(float xRef, float yRef, float height, float minRate, float maxRate, float value, QPainter* painter);
+    void drawVerticalIndicator(float xRef, float yRef, float height, float minRate, float maxRate, float value, QPainter* painter);
+    void drawHorizontalIndicator(float xRef, float yRef, float height, float minRate, float maxRate, float value, QPainter* painter);
     void drawChangeIndicatorGauge(float xRef, float yRef, float radius, float expectedMaxChange, float value, const QColor& color, QPainter* painter, bool solid=true);
 
     void drawPolygon(QPolygonF refPolygon, QPainter* painter);
 
     void playMovie();
+    void stopMovie();
+    void openRTSP();
+    void openFile();
+    void record();
+    void setURL(QString url);
+    double viewTime();
 
 protected:
     void commitRawDataToGL();
-    /** @brief Convert reference coordinates to screen coordinates */
+    /**
+     * @param y coordinate in pixels to be converted to reference mm units
+     * @return the screen coordinate relative to the QGLWindow origin
+     */
     float refToScreenX(float x);
-    /** @brief Convert reference coordinates to screen coordinates */
+    /**
+     * @param x coordinate in pixels to be converted to reference mm units
+     * @return the screen coordinate relative to the QGLWindow origin
+     */
     float refToScreenY(float y);
     /** @brief Convert mm line widths to QPen line widths */
     float refLineWidthToPen(float line);
-    /** @brief Rotate a polygon around a point clockwise */
+    /**
+     * Rotate a polygon around a point
+     *
+     * @param p polygon to rotate
+     * @param origin the rotation center
+     * @param angle rotation angle, in radians
+     * @return p Polygon p rotated by angle around the origin point
+     */
     void rotatePolygonClockWiseRad(QPolygonF& p, float angle, QPointF origin);
     /** @brief Preferred Size */
     QSize sizeHint() const;
@@ -145,8 +187,7 @@ protected:
     static const int updateInterval = 40;
 
     QImage* image; ///< Double buffer image
-    QImage glImage; ///< The background / camera image
-    //UASInterface* uas; ///< The uas currently monitored
+    QImage glImage; ///< The background / camera image    
     float yawInt; ///< The yaw integral. Used to damp the yaw indication.
     QString mode; ///< The current vehicle mode
     QString state; ///< The current vehicle state
@@ -224,11 +265,13 @@ protected:
     float xImageFactor;
     float yImageFactor;
     QAction* enableHUDAction;
-    QAction* enableVideoAction;
-    QAction* selectOfflineDirectoryAction;
     QAction* selectVideoChannelAction;
     void paintEvent(QPaintEvent *event);
     double course;
+
+signals:
+    void emitCaptureImage(QImage img);
+    void emitTitle(QString title);
 };
 
 #endif // HUD_H

@@ -1,24 +1,4 @@
-/*=====================================================================
-
-QGroundControl Open Source Ground Control Station
-
-(c) 2009, 2010 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
-
-This file is part of the QGROUNDCONTROL project
-
-    QGROUNDCONTROL is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    QGROUNDCONTROL is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with QGROUNDCONTROL. If not, see <http://www.gnu.org/licenses/>.
-
+/*===================================================================
 ======================================================================*/
 
 /**
@@ -28,50 +8,22 @@ This file is part of the QGROUNDCONTROL project
  *   @author Lorenz Meier <mavteam@student.ethz.ch>
  *
  */
-
-#include <QShowEvent>
-#include <QContextMenuEvent>
-#include <QMenu>
-#include <QDesktopServices>
-#include <QFileDialog>
-
-#include <QDebug>
-#include <cmath>
-#include <qmath.h>
-#include <limits>
-
 #include "OverlayData.h"
-
-// Fix for some platforms, e.g. windows
-#ifndef GL_MULTISAMPLE
-#define GL_MULTISAMPLE  0x809D
-#endif
 
 template<typename T>
 inline bool isnan(T value)
 {
     return value != value;
-
 }
 
-// requires #include <limits>
 template<typename T>
 inline bool isinf(T value)
 {
     return std::numeric_limits<T>::has_infinity && (value == std::numeric_limits<T>::infinity() || (-1*value) == std::numeric_limits<T>::infinity());
 }
 
-/**
- * @warning The HUD widget will not start painting its content automatically
- *          to update the view, start the auto-update by calling HUD::start().
- *
- * @param width
- * @param height
- * @param parent
- */
 OverlayData::OverlayData(int width, int height, QWidget* parent)
-    : QGLWidget(QGLFormat(QGL::SampleBuffers), parent),
-    //uas(NULL),
+    : QGLWidget(QGLFormat(QGL::SampleBuffers), parent),    
     yawInt(0.0f),
     mode(tr("UNKNOWN MODE")),
     state(tr("UNKNOWN STATE")),
@@ -93,11 +45,11 @@ OverlayData::OverlayData(int width, int height, QWidget* parent)
     receivedChannels(1),
     receivedWidth(640),
     receivedHeight(480),
-    defaultColor(QColor(70, 200, 70)),
-    setPointColor(QColor(200, 20, 200)),
+    defaultColor(QColor(255, 255, 255)),
+    setPointColor(QColor(255, 255, 255)),
     warningColor(Qt::yellow),
     criticalColor(Qt::red),
-    infoColor(QColor(20, 200, 20)),
+    infoColor(QColor(255, 255, 255)),
     fuelColor(criticalColor),
     warningBlinkRate(5),
     refreshTimer(new QTimer(this)),
@@ -133,7 +85,9 @@ OverlayData::OverlayData(int width, int height, QWidget* parent)
     videoEnabled(true),
     xImageFactor(1.0),
     yImageFactor(1.0),
-    video(NULL)
+    video(NULL),
+    isRecord(false),
+    existFileMovie(false)
 {    
     setAutoFillBackground(false);
     setMinimumSize(80, 60);
@@ -146,7 +100,7 @@ OverlayData::OverlayData(int width, int height, QWidget* parent)
     fill.setColor(2, qRgb(0, 0, 0));
     fill.fill(0);
 
-    captureRTSP.open("/Volumes/HDD_120/vuelos/09022012/20120209093344.mp4");
+    //captureRTSP.open("/Volumes/HDD_120/vuelos/09022012/20120209093344.mp4");
 
     refreshTimer->setInterval(updateInterval);
 
@@ -172,12 +126,7 @@ void OverlayData::showEvent(QShowEvent* event)
     // events
     Q_UNUSED(event)
     //refreshTimer->start(updateInterval);
-}
-
-void OverlayData::playMovie()
-{
-    refreshTimer->start(updateInterval);
-}
+    }
 
 void OverlayData::hideEvent(QHideEvent* event)
 {
@@ -189,62 +138,32 @@ void OverlayData::hideEvent(QHideEvent* event)
 
 void OverlayData::contextMenuEvent (QContextMenuEvent* event)
 {
-    QMenu menu(this);
-    // Update actions
+    QMenu menu(this);    
     enableHUDAction->setChecked(hudInstrumentsEnabled);
-    enableVideoAction->setChecked(videoEnabled);
-
     menu.addAction(enableHUDAction);
-    //menu.addAction(selectHUDColorAction);
-    menu.addAction(enableVideoAction);
-    menu.addAction(selectOfflineDirectoryAction);
-    //menu.addAction(selectVideoChannelAction);
     menu.exec(event->globalPos());
 }
 
 void OverlayData::createActions()
 {
-    enableHUDAction = new QAction(tr("Enable HUD"), this);
-    enableHUDAction->setStatusTip(tr("Show the HUD instruments in this window"));
+    enableHUDAction = new QAction(tr("Habilitar vista de datos"), this);
     enableHUDAction->setCheckable(true);
     enableHUDAction->setChecked(hudInstrumentsEnabled);
     connect(enableHUDAction, SIGNAL(triggered(bool)), this, SLOT(enableHUDInstruments(bool)));
-
-    enableVideoAction = new QAction(tr("Enable Video Live feed"), this);
-    enableVideoAction->setStatusTip(tr("Show the video live feed"));
-    enableVideoAction->setCheckable(true);
-    enableVideoAction->setChecked(videoEnabled);
-    connect(enableVideoAction, SIGNAL(triggered(bool)), this, SLOT(enableVideo(bool)));
-
-    selectOfflineDirectoryAction = new QAction(tr("Select image log"), this);
-    selectOfflineDirectoryAction->setStatusTip(tr("Load previously logged images into simulation / replay"));
-    connect(selectOfflineDirectoryAction, SIGNAL(triggered()), this, SLOT(selectOfflineDirectory()));
 }
 
-/**
- * @param y coordinate in pixels to be converted to reference mm units
- * @return the screen coordinate relative to the QGLWindow origin
- */
 float OverlayData::refToScreenX(float x)
 {
     //qDebug() << "sX: " << (scalingFactor * x);
     return (scalingFactor * x);
 }
-/**
- * @param x coordinate in pixels to be converted to reference mm units
- * @return the screen coordinate relative to the QGLWindow origin
- */
+
 float OverlayData::refToScreenY(float y)
 {
     //qDebug() << "sY: " << (scalingFactor * y);
     return (scalingFactor * y);
 }
 
-/**
- * This functions works in the OpenGL view, which is already translated by
- * the x and y center offsets.
- *
- */
 void OverlayData::paintCenterBackground(float roll, float pitch, float yaw)
 {
     // Center indicator is 100 mm wide
@@ -305,15 +224,6 @@ void OverlayData::paintCenterBackground(float roll, float pitch, float yaw)
     glEnd();
 }
 
-/**
- * Paint text on top of the image and OpenGL drawings
- *
- * @param text chars to write
- * @param color text color
- * @param fontSize text size in mm
- * @param refX position in reference units (mm of the real instrument). This is relative to the measurement unit position, NOT in pixels.
- * @param refY position in reference units (mm of the real instrument). This is relative to the measurement unit position, NOT in pixels.
- */
 void OverlayData::paintText(QString text, QColor color, float fontSize, float refX, float refY, QPainter* painter)
 {
     QPen prevPen = painter->pen();
@@ -364,12 +274,6 @@ void OverlayData::initializeGL()
     }
 }
 
-/**
- * @param referencePositionX horizontal position in the reference mm-unit space
- * @param referencePositionY horizontal position in the reference mm-unit space
- * @param referenceWidth width in the reference mm-unit space
- * @param referenceHeight width in the reference mm-unit space
- */
 void OverlayData::setupGLView(float referencePositionX, float referencePositionY, float referenceWidth, float referenceHeight)
 {
     int pixelWidth  = (int)(referenceWidth * scalingFactor);
@@ -470,6 +374,8 @@ void OverlayData::paintHUD()
             if(!captureRTSP.read(frame))
             {
                 qDebug()  << "No frame" ;
+                //refreshTimer->stop();
+                //captureRTSP.release();
                 cv::waitKey();
             }
 
@@ -488,13 +394,29 @@ void OverlayData::paintHUD()
                 //glPixelZoom(1.0f, 1.0f);
             }
 
-            cv::cvtColor(frame,frame, CV_BGR2GRAY);
-            cv::Mat output = cv::Mat::zeros(frame.rows, frame.cols, CV_8UC1);
-            video->stabilizeImage(frame,output);
-            cv::cvtColor(output,output, CV_GRAY2RGB);
+            if(captureRTSP.isOpened())
+            {
+                cv::cvtColor(frame,frame, CV_BGR2GRAY);
+                cv::Mat output = cv::Mat::zeros(frame.rows, frame.cols, CV_8UC1);
+                video->stabilizeImage(frame,output);
+                cv::cvtColor(output,output, CV_GRAY2RGB);
 
-            glImage = QImage((const unsigned char*)(output.data), output.cols, output.rows, QImage::Format_RGB888);
+                if(isRecord)
+                {
+                    if(!existFileMovie)
+                    {
+                        QString path = "/"+QTime::currentTime().toString("hhmmss")+".avi";
+                        writerMovie.open(path.toAscii().data(), CV_FOURCC('D','I','V','X'), 30, frame.size(), true);
 
+                        existFileMovie = true;
+                    }
+
+                    writerMovie << output;
+                }
+
+
+                glImage = QImage((const unsigned char*)(output.data), output.cols, output.rows, QImage::Format_RGB888);
+            }
             //glDrawPixels(glImage.width(), glImage.height(), GL_RGB, GL_UNSIGNED_BYTE, glImage.bits());
         }
         else
@@ -521,141 +443,42 @@ void OverlayData::paintHUD()
             painter.setRenderHint(QPainter::HighQualityAntialiasing, true);
             painter.translate((this->vwidth/2.0+xCenterOffset)*scalingFactor, (this->vheight/2.0+yCenterOffset)*scalingFactor);
 
-            painter.drawImage(refToScreenX((-vwidth/2.0)),refToScreenY( -vheight/2.0), glImage.scaled(this->width(), this->height(), Qt::KeepAspectRatioByExpanding));
+            painter.drawImage(refToScreenX((-vwidth/2.0)), refToScreenY(-vheight/2.0), glImage.scaled(this->width(), this->height(), Qt::KeepAspectRatioByExpanding));
+
+            // COORDINATE FRAME IS NOW (0,0) at CENTER OF WIDGET            
+            QString latitude("Distancia: %1 km");
+            paintText(latitude.arg(viewTime(), 4, 'f', 1, '0'), infoColor, 3.0f, (-vwidth/2.0) + 10, -vheight/2.0 + 5, &painter);
+
+            QString speed("Bateria: %1 v");
+            paintText(speed.arg(viewTime(), 4, 'f', 1, '0'), infoColor, 3.0f, (-vwidth/2.0) + 50, -vheight/2.0 + 5, &painter);
+
+            QString speed2("T. Vuelo: %1");
+            paintText(speed2.arg(QTime::currentTime().toString("HH:mm:ss")), infoColor, 3.0f, (-vwidth/2.0) + 90, -vheight/2.0 + 5, &painter);
 
 
-            // COORDINATE FRAME IS NOW (0,0) at CENTER OF WIDGET
+            QString speed4("Latitud: %1 N");
+            paintText(speed4.arg(viewTime(), 4, 'f', 1, '0'), infoColor, 3.0f, (-vwidth/2.0) + 10, vheight/2 - 5, &painter);
 
-            QString course("Rum: %1 ");
-            paintText(course.arg(0, 4, 'f', 1, '0'), infoColor, 6.0f, (-vwidth/2.0) + 10, -vheight/2.0 + 5, &painter);
+            QString speed5("Longitud: %1 O");
+            paintText(speed5.arg(viewTime(), 4, 'f', 1, '0'), infoColor, 3.0f, (-vwidth/2.0) + 50, vheight/2 - 5, &painter);
 
-            QString speed("Vel: %1 m/s");
-            paintText(speed.arg(this->xSpeed, 4, 'f', 1, '0'), infoColor, 6.0f, (-vwidth/2.0) + 70, -vheight/2.0 + 5, &painter);
+            QString altitude("Altura: %1 m");
+            paintText(altitude.arg(viewTime(), 4, 'f', 1, '0'), infoColor, 3.0f, (-vwidth/2.0) + 90, vheight/2 - 5, &painter);
 
-            QString altitude("Alt: %1 m");
-            paintText(altitude.arg(this->alt, 4, 'f', 1, '0'), infoColor, 6.0f, (-vwidth/2.0) + 130, -vheight/2.0 + 5, &painter);
-
-
-            // Draw all fixed indicators
-            // MODE
-            paintText(mode, infoColor, 2.0f, (-vwidth/2.0) + 10, -vheight/2.0 + 10, &painter);
-            // STATE
-            paintText(state, infoColor, 2.0f, (-vwidth/2.0) + 10, -vheight/2.0 + 15, &painter);
-            // BATTERY
-            paintText(fuelStatus, fuelColor, 2.0f, (-vwidth/2.0) + 10, -vheight/2.0 + 20, &painter);
-            // Waypoint
-            paintText(waypointName, defaultColor, 2.0f, (-vwidth/3.0) + 10, +vheight/3.0 + 15, &painter);
-
-//            // YAW INDICATOR
-//            //
-//            //      .
-//            //    .   .
-//            //   .......
-//            //
-//            const float yawIndicatorWidth = 4.0f;
-//            const float yawIndicatorY = vheight/2.0f - 10.0f;
-//            QPolygon yawIndicator(4);
-//            yawIndicator.setPoint(0, QPoint(refToScreenX(0.0f), refToScreenY(yawIndicatorY)));
-//            yawIndicator.setPoint(1, QPoint(refToScreenX(yawIndicatorWidth/2.0f), refToScreenY(yawIndicatorY+yawIndicatorWidth)));
-//            yawIndicator.setPoint(2, QPoint(refToScreenX(-yawIndicatorWidth/2.0f), refToScreenY(yawIndicatorY+yawIndicatorWidth)));
-//            yawIndicator.setPoint(3, QPoint(refToScreenX(0.0f), refToScreenY(yawIndicatorY)));
-//            painter.setPen(defaultColor);
-//            painter.drawPolyline(yawIndicator);
-
-//            // CENTER
-
-//            // HEADING INDICATOR
-//            //
-//            //    __      __
-//            //       \/\/
-//            //
-//            const float hIndicatorWidth = 7.0f;
-//            const float hIndicatorY = -25.0f;
-//            const float hIndicatorYLow = hIndicatorY + hIndicatorWidth / 6.0f;
-//            const float hIndicatorSegmentWidth = hIndicatorWidth / 7.0f;
-//            QPolygon hIndicator(7);
-//            hIndicator.setPoint(0, QPoint(refToScreenX(0.0f-hIndicatorWidth/2.0f), refToScreenY(hIndicatorY)));
-//            hIndicator.setPoint(1, QPoint(refToScreenX(0.0f-hIndicatorWidth/2.0f+hIndicatorSegmentWidth*1.75f), refToScreenY(hIndicatorY)));
-//            hIndicator.setPoint(2, QPoint(refToScreenX(0.0f-hIndicatorSegmentWidth*1.0f), refToScreenY(hIndicatorYLow)));
-//            hIndicator.setPoint(3, QPoint(refToScreenX(0.0f), refToScreenY(hIndicatorY)));
-//            hIndicator.setPoint(4, QPoint(refToScreenX(0.0f+hIndicatorSegmentWidth*1.0f), refToScreenY(hIndicatorYLow)));
-//            hIndicator.setPoint(5, QPoint(refToScreenX(0.0f+hIndicatorWidth/2.0f-hIndicatorSegmentWidth*1.75f), refToScreenY(hIndicatorY)));
-//            hIndicator.setPoint(6, QPoint(refToScreenX(0.0f+hIndicatorWidth/2.0f), refToScreenY(hIndicatorY)));
-//            painter.setPen(defaultColor);
-//            painter.drawPolyline(hIndicator);
-
-
-            // SETPOINT
             const float centerWidth = 4.0f;
-            painter.setPen(defaultColor);
-            painter.setBrush(Qt::NoBrush);
-            // TODO
-            //painter.drawEllipse(QPointF(refToScreenX(qMin(10.0f, values.value("roll desired", 0.0f) * 10.0f)), refToScreenY(qMin(10.0f, values.value("pitch desired", 0.0f) * 10.0f))), refToScreenX(centerWidth/2.0f), refToScreenX(centerWidth/2.0f));
-
             const float centerCrossWidth = 10.0f;
-            // left
-            //painter.drawLine(QPointF(refToScreenX(-centerWidth / 2.0f), refToScreenY(0.0f)), QPointF(refToScreenX(-centerCrossWidth / 2.0f), refToScreenY(0.0f)));
-            // right
-            //painter.drawLine(QPointF(refToScreenX(centerWidth / 2.0f), refToScreenY(0.0f)), QPointF(refToScreenX(centerCrossWidth / 2.0f), refToScreenY(0.0f)));
-            // top
-            //painter.drawLine(QPointF(refToScreenX(0.0f), refToScreenY(-centerWidth / 2.0f)), QPointF(refToScreenX(0.0f), refToScreenY(-centerCrossWidth / 2.0f)));
 
-
-
-            // COMPASS
-            const float compassY = -vheight/2.0f + 10.0f;
-            QRectF compassRect(QPointF(refToScreenX(-5.0f), refToScreenY(compassY)), QSizeF(refToScreenX(10.0f), refToScreenY(5.0f)));
-            painter.setBrush(Qt::NoBrush);
-            painter.setPen(Qt::SolidLine);
             painter.setPen(defaultColor);
-            painter.drawRoundedRect(compassRect, 2, 2);
-            QString yawAngle;
+            painter.drawLine(QPointF(refToScreenX(-centerWidth / 1.0f), refToScreenY(0.0f)), QPointF(refToScreenX(-centerCrossWidth / 1.0f), refToScreenY(0.0f)));
+            // right
+            painter.drawLine(QPointF(refToScreenX(centerWidth / 1.0f), refToScreenY(0.0f)), QPointF(refToScreenX(centerCrossWidth / 1.0f), refToScreenY(0.0f)));
 
-            //    const float yawDeg = ((values.value("yaw", 0.0f)/M_PI)*180.0f)+180.f;
+            painter.drawLine(QPointF(refToScreenX(0.0f), refToScreenY(-centerWidth / 1.0f)), QPointF(refToScreenX(0.0f), refToScreenY(-centerCrossWidth / 1.0f)));
+            painter.drawLine(QPointF(refToScreenX(0.0f), refToScreenY(+centerWidth / 1.0f)), QPointF(refToScreenX(0.0f), refToScreenY(+centerCrossWidth / 1.0f)));
 
-            // YAW is in compass-human readable format, so 0 - 360deg. This is normal in aviation, not -180 - +180.
-            const float yawDeg = ((yawLP/M_PI)*180.0f)+180.0f+180.0f;
-            int yawCompass = static_cast<int>(yawDeg) % 360;
-            yawAngle.sprintf("%03d", yawCompass);
-            paintText(yawAngle, defaultColor, 3.5f, -4.3f, compassY+ 0.97f, &painter);
+            drawVerticalIndicator(-90.0f, -60.0f, 120.0f, -90.0f, 90.0f, viewTime(), &painter);
+            drawHorizontalIndicator(-50.0f, vheight/2 - 15, 120.0f, -180.0f, 180.0f, viewTime(), &painter);
 
-            // CHANGE RATE STRIPS
-            drawChangeRateStrip(-51.0f, -50.0f, 15.0f, -1.0f, 1.0f, -zSpeed, &painter);
-
-            // CHANGE RATE STRIPS
-            drawChangeRateStrip(49.0f, -50.0f, 15.0f, -1.0f, 1.0f, totalAcc, &painter);
-
-            // GAUGES
-
-            // Left altitude gauge
-            float gaugeAltitude;
-
-            if (this->alt != 0)
-            {
-                gaugeAltitude = alt;
-            }
-            else
-            {
-                gaugeAltitude = -zPos;
-            }
-
-            drawChangeIndicatorGauge(-vGaugeSpacing, -15.0f, 10.0f, 2.0f, gaugeAltitude, defaultColor, &painter, false);
-
-            // Right speed gauge
-            drawChangeIndicatorGauge(vGaugeSpacing, -15.0f, 10.0f, 5.0f, totalSpeed, defaultColor, &painter, false);
-
-
-            // Waypoint name
-            if (waypointName != "") paintText(waypointName, defaultColor, 2.0f, (-vwidth/3.0) + 10, +vheight/3.0 + 15, &painter);
-
-            // MOVING PARTS
-
-
-            painter.translate(refToScreenX(yawTrans), 0);
-            painter.rotate((rollLP/M_PI)* -180.0f);
-            painter.translate(0, (-pitchLP/(float)M_PI)* -180.0f * refToScreenY(1.8f));
-
-            paintPitchLines(pitchLP, &painter);
             painter.end();
         }
         else
@@ -665,17 +488,9 @@ void OverlayData::paintHUD()
             painter.drawImage(0,0, glImage.scaled(this->width(), this->height(), Qt::KeepAspectRatioByExpanding));
             painter.end();
         }
-        //glDisable(GL_MULTISAMPLE);
-
-
-
-        //glFlush();
     }
 }
 
-/**
- * @param pitch pitch angle in degrees (-180 to 180)
- */
 void OverlayData::paintPitchLines(float pitch, QPainter* painter)
 {
     QString label;
@@ -833,14 +648,6 @@ float OverlayData::refLineWidthToPen(float line)
     return line * 2.50f;
 }
 
-/**
- * Rotate a polygon around a point
- *
- * @param p polygon to rotate
- * @param origin the rotation center
- * @param angle rotation angle, in radians
- * @return p Polygon p rotated by angle around the origin point
- */
 void OverlayData::rotatePolygonClockWiseRad(QPolygonF& p, float angle, QPointF origin)
 {
     // Standard 2x2 rotation matrix, counter-clockwise
@@ -875,7 +682,7 @@ void OverlayData::drawPolygon(QPolygonF refPolygon, QPainter* painter)
     painter->drawPolygon(draw);
 }
 
-void OverlayData::drawChangeRateStrip(float xRef, float yRef, float height, float minRate, float maxRate, float value, QPainter* painter)
+void OverlayData::drawVerticalIndicator(float xRef, float yRef, float height, float minRate, float maxRate, float value, QPainter* painter)
 {
     QBrush brush(defaultColor, Qt::NoBrush);
     painter->setBrush(brush);
@@ -906,18 +713,56 @@ void OverlayData::drawChangeRateStrip(float xRef, float yRef, float height, floa
 
     // Indicator lines
     // Top horizontal line
-    drawLine(xRef, yRef, xRef+width, yRef, lineWidth, defaultColor, painter);
+    drawLine(xRef-width/4.0f, yRef, xRef+width/4.0f, yRef, lineWidth, defaultColor, painter);
     // Vertical main line
-    drawLine(xRef+width/2.0f, yRef, xRef+width/2.0f, yRef+height, lineWidth, defaultColor, painter);
+    //drawLine(xRef+width/2.0f, yRef, xRef+width/2.0f, yRef+height, lineWidth, defaultColor, painter);
+    drawLine(xRef, yRef, xRef, yRef+height, lineWidth, defaultColor, painter);
     // Zero mark
-    drawLine(xRef, yRef+height/2.0f, xRef+width, yRef+height/2.0f, lineWidth, defaultColor, painter);
+    drawLine(xRef-width/4.0f, yRef+height/2.0f, xRef+width/4.0f, yRef+height/2.0f, lineWidth, defaultColor, painter);
     // Horizontal bottom line
-    drawLine(xRef, yRef+height, xRef+width, yRef+height, lineWidth, defaultColor, painter);
+    drawLine(xRef-width/4.0f, yRef+height, xRef+width/4.0f, yRef+height, lineWidth, defaultColor, painter);
 
     // Text
     QString label;
     label.sprintf("< %+06.2f", value);
-    paintText(label, defaultColor, 3.0f, xRef+width/2.0f, yRef+height-((scaledValue - minRate)/(maxRate-minRate))*height - 1.6f, painter);
+    paintText(label, defaultColor, 3.0f, xRef+1.0f, yRef+height-((scaledValue - minRate)/(maxRate-minRate))*height - 1.6f, painter);
+}
+
+void OverlayData::drawHorizontalIndicator(float xRef, float yRef, float height, float minRate, float maxRate, float value, QPainter* painter)
+{
+    QBrush brush(defaultColor, Qt::NoBrush);
+    painter->setBrush(brush);
+    QPen rectPen(Qt::SolidLine);
+    rectPen.setWidth(0);
+    rectPen.setColor(defaultColor);
+    painter->setPen(rectPen);
+
+    float scaledValue = -value;
+
+    // Saturate value
+    if (value > maxRate) scaledValue = maxRate;
+    if (value < minRate) scaledValue = minRate;
+
+    //                                      v
+    //           x (Origin: xRef, yRef) |-------|-------|
+
+    const float width = height / 8.0f;
+    const float lineWidth = 0.5f;
+
+    //line main horizontal
+    drawLine(xRef, yRef, xRef+height, yRef, lineWidth, defaultColor, painter);
+    drawLine(xRef, yRef+width/4.0f, xRef, yRef-width/4.0f, lineWidth, defaultColor, painter);
+    drawLine(xRef+height/2.0f, yRef+width/4.0f, xRef+height/2.0f, yRef-width/4.0f, lineWidth, defaultColor, painter);
+    drawLine(xRef+height, yRef+width/4.0f, xRef+height, yRef-width/4.0f, lineWidth, defaultColor, painter);
+
+    // Text
+    QString label;
+    label.sprintf("%+06.2f", value);
+    paintText(label, defaultColor, 3.0f, xRef+height-((scaledValue - minRate)/(maxRate-minRate))*height - 4.8f, yRef-width/2.0f - 2.0f, painter);
+
+    QString label2;
+    label2.sprintf("v", value);
+    paintText(label2, defaultColor, 3.0f, xRef+height-((scaledValue - minRate)/(maxRate-minRate))*height - 1.6, yRef-4.0f, painter);
 }
 
 void OverlayData::drawChangeIndicatorGauge(float xRef, float yRef, float radius, float expectedMaxChange, float value, const QColor& color, QPainter* painter, bool solid)
@@ -998,7 +843,7 @@ void OverlayData::resizeGL(int w, int h)
     //    glMatrixMode(GL_PROJECTION);
     //    glPolygonMode(GL_NONE, GL_FILL);
     //FIXME
-    paintHUD();
+    //paintHUD();
 }
 
 void OverlayData::setImageSize(int width, int height, int depth, int channels)
@@ -1140,23 +985,9 @@ void OverlayData::startImage(quint64 timestamp)
     }
 }
 
-void OverlayData::selectOfflineDirectory()
-{
-    QString fileName = QFileDialog::getExistingDirectory(this, tr("Select image directory"), QDesktopServices::storageLocation(QDesktopServices::DesktopLocation));
-    if (fileName != "")
-    {
-        offlineDirectory = fileName;
-    }
-}
-
 void OverlayData::enableHUDInstruments(bool enabled)
 {
     hudInstrumentsEnabled = enabled;
-}
-
-void OverlayData::enableVideo(bool enabled)
-{
-    videoEnabled = enabled;
 }
 
 void OverlayData::setPixels(int imgid, const unsigned char* imageData, int length, int startIndex)
@@ -1187,4 +1018,84 @@ void OverlayData::setPixels(int imgid, const unsigned char* imageData, int lengt
             }
         }
     }
+}
+
+void OverlayData::openFile()
+{
+    QString filename = QFileDialog::getOpenFileName(this, "Open Video", "Video Files (*.mp4, *.mpg)");
+
+    if(!filename.isEmpty())
+    {
+        setURL(filename);
+    }
+}
+
+void OverlayData::openRTSP()
+{
+    bool ok;
+    QString filename = QInputDialog::getText(this, tr("Ingrese la URL"), tr("URL RTSP Axis:"), QLineEdit::Normal, tr("rtsp://192.168.1.90:554/axis-media/media.amp"), &ok);
+
+    if (ok && !filename.isEmpty())
+    {
+        setURL(filename);
+    }
+}
+
+void OverlayData::record()
+{
+    isRecord = !isRecord;
+
+    if(!isRecord)
+    {
+        existFileMovie = false;
+    }
+}
+
+void OverlayData::setURL(QString url)
+{
+    captureRTSP.release();
+
+    if(!captureRTSP.open(url.toAscii().data()))
+    {
+        qDebug() << "Error opening video stream or file";
+        return;
+    }
+
+    emit emitTitle(url);
+}
+
+void OverlayData::playMovie()
+{
+    refreshTimer->start(updateInterval);
+}
+
+void OverlayData::stopMovie()
+{
+    refreshTimer->stop();
+}
+
+double OverlayData::viewTime()
+{
+    //hh:mm:ss.zzz 14:13:09.042
+    QString timeFormat = "ss.zzz";
+    return QTime::currentTime().toString(timeFormat).toDouble();//QString::number(time);
+}
+
+void OverlayData::mousePressEvent(QMouseEvent *event)
+{
+    if(event->button() == Qt::LeftButton)
+    {
+        xMouse = event->x();
+        yMouse = event->y();
+
+        qDebug()<<"X: "<<xMouse;
+        qDebug()<<"Y: "<<xMouse;
+
+        if(!glImage.isNull())
+        {
+            emit emitCaptureImage(glImage.copy(xMouse, yMouse, 40, 40));
+        }
+    }
+
+    QWidget::mousePressEvent(event);
 }

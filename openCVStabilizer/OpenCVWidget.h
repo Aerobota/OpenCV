@@ -8,12 +8,13 @@
 #include <QMouseEvent>
 #include <QHBoxLayout>
 #include <QPushButton>
-
+#include <QLabel>
 
 #include "core/core.hpp"
 #include "highgui/highgui.hpp"
 #include "../videoStabilizer.h"
 #include "imgproc/imgproc.hpp"
+#include "OverlayData.h"
 
 namespace Ui {
     class OpenCVWidget;
@@ -27,26 +28,18 @@ public:
     explicit OpenCVWidget(QWidget *parent = 0);
     ~OpenCVWidget();
 
-    void mousePressEvent(QMouseEvent *event);
-
 private:
     Ui::OpenCVWidget *ui;
-    cv::VideoCapture captureRTSP;
-    cv::VideoWriter writerMovie;
-    QTimer* mytimer;
-    /** This is the video stabilizer algorithm class*/
-    videoStabilizer* video;
-    int x, y;
 
     QPushButton* btPlay;
+    QPushButton* btStop;
+    QPushButton* btFile;
+    QPushButton* btRTSP;
+    QPushButton* btRecord;
+    QLabel* lbTitle;
 
 public slots:
-    void playRTSP();
-    void playFile();
-    void timerRTSP();
-    void setURL(QString url);
-    void playMovie();
-    void stopMovie();
+    void showCaptureImage(QImage img);
 };
 
 #endif // OPENCVWIDGET_H
