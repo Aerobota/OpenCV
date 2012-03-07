@@ -9,6 +9,8 @@
 #include <QHBoxLayout>
 #include <QPushButton>
 #include <QLabel>
+#include <QCheckBox>
+#include <QSlider>
 
 #include "core/core.hpp"
 #include "highgui/highgui.hpp"
@@ -37,6 +39,10 @@ private:
     QPushButton* btRTSP;
     QPushButton* btRecord;
     QLabel* lbTitle;
+
+    QCheckBox* cxStabilizer;
+    QCheckBox* cxFilter;
+    QSlider* slSizeKernel;
 
 public slots:
     void showCaptureImage(QImage img);

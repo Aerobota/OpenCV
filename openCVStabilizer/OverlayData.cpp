@@ -67,7 +67,10 @@ OverlayData::OverlayData(int width, int height, QWidget* parent)
     videoEnabled(true),
     video(NULL),
     isRecord(false),
-    existFileMovie(false)
+    existFileMovie(false),
+    enableFilter(0),
+    enableStabilizer(0),
+    sizeKernel(0)
 {    
     setAutoFillBackground(false);
     setMinimumSize(80, 60);
@@ -324,8 +327,20 @@ void OverlayData::paintHUD()
             {
                 cv::cvtColor(frame,frame, CV_BGR2GRAY);
                 cv::Mat output = cv::Mat::zeros(frame.rows, frame.cols, CV_8UC1);
-                video->stabilizeImage(frame,output);
+
+                if(enableStabilizer == Qt::Checked)
+                {
+                    video->stabilizeImage(frame,output);
+                }
+                else
+                {
+                    output = frame;
+                }
                 cv::cvtColor(output,output, CV_GRAY2RGB);
+
+                if(enableFilter == Qt::Checked)
+                {
+                }
 
                 if(isRecord)
                 {
@@ -620,4 +635,20 @@ void OverlayData::mousePressEvent(QMouseEvent *event)
     }
 
     QWidget::mousePressEvent(event);
+}
+
+void OverlayData::setEnableFilter(int enable)
+{
+    this->enableFilter = enable;
+}
+
+void OverlayData::setEnableStabilizer(int enable)
+{
+    this->enableStabilizer = enable;
+}
+
+void OverlayData::setSizeKernel(int value)
+{
+    this->sizeKernel = value;
+    qDebug()<<value;
 }

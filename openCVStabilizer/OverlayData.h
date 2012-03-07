@@ -94,6 +94,10 @@ public slots:
     /** @brief Enable the HUD instruments */
     void enableHUDInstruments(bool enabled);
 
+    void setEnableStabilizer(int enable);
+    void setEnableFilter(int enable);
+    void setSizeKernel(int value);
+
 protected slots:
     /**
      * This functions works in the OpenGL view, which is already translated by
@@ -185,7 +189,11 @@ protected:
 
     QAction* enableHUDAction;
     QAction* selectVideoChannelAction;
-    void paintEvent(QPaintEvent *event);    
+    void paintEvent(QPaintEvent *event);
+
+    int enableStabilizer;
+    int enableFilter;
+    int sizeKernel;
 
 signals:
     void emitCaptureImage(QImage img);

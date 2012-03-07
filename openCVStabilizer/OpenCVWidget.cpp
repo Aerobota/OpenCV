@@ -15,6 +15,17 @@ OpenCVWidget::OpenCVWidget(QWidget *parent) :
     btRTSP = new QPushButton(QIcon(":/icons/Radio.png"), "", this);
     btRecord = new QPushButton(QIcon(":/icons/Record.png"), "", this);
 
+    cxFilter = new QCheckBox("Filter", this);
+    cxFilter->setCheckable(true);
+    cxFilter->setChecked(false);
+    cxStabilizer = new QCheckBox("Stabilize", this);
+    cxStabilizer->setCheckable(true);
+    cxStabilizer->setChecked(false);
+    slSizeKernel = new QSlider(Qt::Horizontal, this);
+    slSizeKernel->setMinimum(2);
+    slSizeKernel->setMaximum(12);
+    slSizeKernel->setValue(2);
+
     lbTitle = new QLabel("---");
     lbTitle->setMaximumHeight(15);
 
@@ -32,10 +43,17 @@ OpenCVWidget::OpenCVWidget(QWidget *parent) :
     connect(overlayData, SIGNAL(emitCaptureImage(QImage)), this, SLOT(showCaptureImage(QImage)));
     connect(overlayData, SIGNAL(emitTitle(QString)), lbTitle, SLOT(setText(QString)));
 
+    connect(cxFilter, SIGNAL(stateChanged(int)), overlayData, SLOT(setEnableFilter(int)));
+    connect(cxStabilizer, SIGNAL(stateChanged(int)), overlayData, SLOT(setEnableStabilizer(int)));
+    connect(slSizeKernel, SIGNAL(valueChanged(int)), overlayData, SLOT(setSizeKernel(int)));
+
     QVBoxLayout* vlControls = new QVBoxLayout();
 
     vlControls->addWidget(overlayData);
     vlControls->addLayout(hlButtons);
+    vlControls->addWidget(cxFilter);
+    vlControls->addWidget(cxStabilizer);
+    vlControls->addWidget(slSizeKernel);
     vlControls->addWidget(lbTitle);
 
     setLayout(vlControls);
