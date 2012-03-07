@@ -22,9 +22,9 @@ OpenCVWidget::OpenCVWidget(QWidget *parent) :
     cxStabilizer->setCheckable(true);
     cxStabilizer->setChecked(false);
     slSizeKernel = new QSlider(Qt::Horizontal, this);
-    slSizeKernel->setMinimum(2);
+    slSizeKernel->setMinimum(1);
     slSizeKernel->setMaximum(12);
-    slSizeKernel->setValue(2);
+    slSizeKernel->setValue(1);
 
     lbTitle = new QLabel("---");
     lbTitle->setMaximumHeight(15);

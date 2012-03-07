@@ -649,6 +649,46 @@ void OverlayData::setEnableStabilizer(int enable)
 
 void OverlayData::setSizeKernel(int value)
 {
-    this->sizeKernel = value;
-    qDebug()<<value;
+    int kernel = 1;
+    switch(value)
+    {
+    case 1:
+        kernel = 1;
+        break;
+    case 2:
+        kernel = 3;
+        break;
+    case 3:
+        kernel = 5;
+        break;
+    case 4:
+        kernel = 7;
+        break;
+    case 5:
+        kernel = 9;
+        break;
+    case 6:
+        kernel = 11;
+        break;
+    case 7:
+        kernel = 13;
+        break;
+    case 8:
+        kernel = 15;
+        break;
+    case 9:
+        kernel = 17;
+        break;
+    case 10:
+        kernel = 19;
+        break;
+    case 11:
+        kernel = 21;
+        break;
+    case 12:
+        kernel = 23;
+        break;
+    }
+    this->sizeKernel = kernel;
+    qDebug()<<sizeKernel;
 }
